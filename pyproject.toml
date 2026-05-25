@@ -3,7 +3,7 @@ name = "mcenroebot"
 version = "0.1.0"
 description = "McEnroe ping pong robot — V2 control software (aim + swing)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "numpy>=1.24",
     "pydantic>=2.13.4",
@@ -26,14 +26,14 @@ packages = ["src/mcenroebot"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py313"
 exclude = ["tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 strict = true
 plugins = ["pydantic.mypy"]
 mypy_path = "src"
@@ -109,11 +109,11 @@ asyncio_default_fixture_loop_scope = "function"
 xfail_strict = true
 tmp_path_retention_policy = "failed"
 addopts = [
-    "-ra",                              # summary for all non-passing outcomes
-    "--strict-markers",                 # unknown @pytest.mark.* fails the run
-    "--strict-config",                  # typos in ini options fail the run
-    "--tb=short",                       # compact tracebacks
-    "--import-mode=importlib",          # modern import mode; works with src/ layout
+    "-ra", # summary for all non-passing outcomes
+    "--strict-markers", # unknown @pytest.mark.* fails the run
+    "--strict-config", # typos in ini options fail the run
+    "--tb=short", # compact tracebacks
+    "--import-mode=importlib", # modern import mode; works with src/ layout
     "--cov=mcenroebot",
     "--cov-branch",
     "--cov-report=term-missing:skip-covered",
@@ -121,7 +121,7 @@ addopts = [
     "--cov-report=xml",
 ]
 filterwarnings = [
-    "error",                            # treat warnings as errors; add ignores below as needed
+    "error", # treat warnings as errors; add ignores below as needed
     # "ignore::DeprecationWarning:some_third_party_pkg",
 ]
 markers = [
@@ -158,7 +158,7 @@ exclude_also = [
     "@overload",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
-    "\\.\\.\\.",                        # ellipsis-only stubs
+    "\\.\\.\\.", # ellipsis-only stubs
     "pragma: no cover",
 ]
 
