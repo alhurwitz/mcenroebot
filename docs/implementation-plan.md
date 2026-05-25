@@ -15,8 +15,9 @@ Actionable, wave-by-wave execution plan derived from [`V2_PLAN.md`](V2_PLAN.md).
 | Dep manager | `uv` (never hand-edit `pyproject.toml` deps) |
 | Coverage floor | 85% (aim ≥95% on pure-math modules) |
 | Current branch | `feature/aim` |
-| Done | `aim.py` + 30 tests, pydantic v2 refactor (committed `632a8e9`) |
-| Next | Wave 1 — clock / ball / camera / drivers |
+| Done | `aim/` package (committed `632a8e9` + `56950c4`), `clock/` package (committed `56950c4`); 76 tests, 100% coverage |
+| Next | Wave 1 — camera / ball / drivers |
+| Structure | Each component is a **package** under `src/mcenroebot/<name>/` (`__init__.py`, split files by responsibility); tests mirror at `tests/test_<name>/test_<concern>.py` |
 
 ### Module dependency graph
 
@@ -64,43 +65,27 @@ uv run ruff check src/    # clean
 
 ---
 
-## 2. Wave 1 — foundation modules (parallelizable, 2 streams)
+## 2. Wave 1 — foundation modules (sequential, with subagent review)
 
-Two agents can work in parallel. Stream B introduces the `pi` optional-dependency group.
+Each module is a **package** under `src/mcenroebot/<name>/` (`__init__.py` + split files), tested via mirror layout under `tests/test_<name>/`.
 
-### Stream A — pure-Python value objects and helpers
+| # | Package | Status | Public surface | Tests required |
+| --- | --- | --- | --- | --- |
+| 1A | `aim/` | ✅ done | `AimController`, `Position3D`, `ServoAngles`, `TurretGeometry` (pre-existing; split into `value_objects.py` + `controller.py`) | n/a — already covered |
+| 1B | `clock/` | ✅ done | `Clock(Protocol)`, `SystemClock`, `FakeClock` (`now`, `async sleep`, `.advance`, `.elapsed`); files `protocol.py`, `system.py`, `fake.py` | Protocol compliance; monotonicity; `FakeClock.sleep` non-blocking; `SystemClock.sleep` real-time; negative durations raise `ValueError` |
+| 1C | `camera/` | ⏳ next | `CameraIntrinsics` (`fx_px`, `fy_px`, `cx_px`, `cy_px`, `distortion`, `image_width`, `image_height`) + `pixel_to_ray(u, v)` helper | Round-trip a known projection; default distortion is zero; `ValidationError` on negative focal length |
+| 1D | `ball/` | ⏳ (after camera) | `BallObservation`, `BallState`, `StrikePrediction`, `PixelObservation` (frozen pydantic); `DepthEstimator(Protocol)`, `BallRadiusDepthEstimator`; stubs `StereoDepthEstimator`/`RealSenseDepthEstimator` raising `NotImplementedError` | Round-trip known geometry through `BallRadiusDepthEstimator`; frozen-ness of all models; `confidence` ∈ `[0, 1]`; `ValidationError` on negative `radius_px` |
+| 1E | `drivers/servo/`, `drivers/bldc/` | ⏳ | `ServoDriver(Protocol)` + `PCA9685ServoDriver` (lazy `adafruit_servokit` import) + `MockServoDriver`; `BLDCDriver(Protocol)` + `PCA9685BLDCDriver` (throttle 0→1000 µs, 1→2000 µs) + `MockBLDCDriver` | Mock drivers record calls in order; real driver doesn't require Adafruit libs at import-time; real-driver smoke tests are `@pytest.mark.integration`; throttle outside `[0, 1]` rejected; `set_throttle` pre-arm raises `RuntimeError` |
 
-| Module | Public surface | Tests required |
-| --- | --- | --- |
-| `clock.py` | `Clock(Protocol)`, `SystemClock`, `FakeClock` (`now()`, `async sleep()`, `.advance()`, `.elapsed`) | Monotonicity; `FakeClock.sleep` advances internal time without blocking; `SystemClock.sleep` actually awaits (small timeout + measurement) |
-| `ball.py` | `BallObservation`, `BallState`, `StrikePrediction`, `PixelObservation` (all `BaseModel`, frozen); `DepthEstimator(Protocol)`, `BallRadiusDepthEstimator`; stubs `StereoDepthEstimator` and `RealSenseDepthEstimator` raising `NotImplementedError` | Round-trip known geometry through `BallRadiusDepthEstimator`; frozen-ness of all models; `confidence` ∈ `[0, 1]`; `ValidationError` on negative `radius_px` |
-| `camera.py` | `CameraIntrinsics` (`fx_px`, `fy_px`, `cx_px`, `cy_px`, `distortion`, `image_width`, `image_height`) + `pixel_to_ray(u, v)` helper | Round-trip a known projection; default distortion is zero; `ValidationError` on negative focal length |
-
-**Commits**
+**Commits** (one per package):
 ```
-feat(clock): add Clock protocol, SystemClock, FakeClock
-feat(ball): add BallObservation, BallState, StrikePrediction, DepthEstimator
 feat(camera): add pinhole CameraIntrinsics model
-```
-
-### Stream B — hardware drivers + `pi` optional extra
-
-1. Add `[project.optional-dependencies] pi = [...]` to `pyproject.toml` (via `uv add --optional pi <pkg>`):
-   - `adafruit-blinka`
-   - `adafruit-circuitpython-pca9685`
-   - `adafruit-circuitpython-servokit`
-2. Create `src/mcenroebot/drivers/__init__.py` (empty re-export package).
-
-| Module | Public surface | Tests required |
-| --- | --- | --- |
-| `drivers/servo.py` | `ServoDriver(Protocol)` with `write_angle(channel, angle_deg)`; `PCA9685ServoDriver(i2c_address=0x40, frequency_hz=50)` with **lazy** `adafruit_servokit` import inside `__init__`; `MockServoDriver` exposing `history: list[tuple[int, float]]` | `MockServoDriver` records calls in order; importing `PCA9685ServoDriver` does **not** require Adafruit libs at module import time; a real-driver smoke test is marked `@pytest.mark.integration` and skipped off-Pi |
-| `drivers/bldc.py` | `BLDCDriver(Protocol)` with `arm()`, `set_throttle(0..1)`, `disarm()`; `PCA9685BLDCDriver(channel=2, i2c_address=0x40, frequency_hz=50)` mapping throttle 0→1000 µs, 1→2000 µs; `MockBLDCDriver` with `armed: bool` and `throttle_history: list[float]` | Throttle outside `[0, 1]` raises (`ValidationError` if pydantic-modeled, else `ValueError`); `set_throttle` before `arm()` raises `RuntimeError`; `disarm()` zeros throttle |
-
-**Commits**
-```
+feat(ball): add BallObservation, BallState, StrikePrediction, DepthEstimator
 chore(deps): add pi optional extra (adafruit blinka + pca9685 + servokit)
 feat(drivers): add ServoDriver + BLDCDriver protocols, real + mock impls
 ```
+
+Pi-only dependencies (`adafruit-blinka`, `adafruit-circuitpython-pca9685`, `adafruit-circuitpython-servokit`) live in `[project.optional-dependencies] pi = [...]` added via `uv add --optional pi <pkg>`. Real drivers import Adafruit libs **lazily inside `__init__`** so the package still imports cleanly on a Mac without the extra installed.
 
 ### End-of-Wave-1 housekeeping
 
