@@ -81,6 +81,13 @@ module = [
     # Phase 8: MCP SDK and uvicorn (no type stubs in pre-commit env)
     "mcp", "mcp.*",
     "uvicorn", "uvicorn.*",
+    # Pi-only Adafruit hardware libraries (installed via `uv sync --extra pi`).
+    # On the dev Mac these are absent, so mypy can't resolve them — that's fine,
+    # the real driver code is lazy-imported and gated.
+    "adafruit_servokit",
+    "adafruit_pca9685",
+    "board",
+    "busio",
 ]
 ignore_missing_imports = true
 
