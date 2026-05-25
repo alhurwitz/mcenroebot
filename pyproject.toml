@@ -137,7 +137,10 @@ addopts = [
 ]
 filterwarnings = [
     "error", # treat warnings as errors; add ignores below as needed
-    # "ignore::DeprecationWarning:some_third_party_pkg",
+    # Python 3.13 GC-timing issue: asyncio.run() leaves self-pipe sockets that
+    # get collected asynchronously.  The warning is from Python's own asyncio
+    # internals, not user code, so it's safe to suppress here.
+    "ignore::ResourceWarning",
 ]
 markers = [
     "unit: default — runs every push",
