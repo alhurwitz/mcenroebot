@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Test / coverage cache
+.pytest_cache/
+.coverage
+.coverage.*
+__pycache__/
+*.py[cod]
+.venv/
