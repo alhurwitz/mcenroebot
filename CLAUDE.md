@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 McEnroe is a hobby ping-pong robot. V2 is the **aim-and-swat** phase: a 3-axis turret with two MG996R servos (J1 yaw, J2 pitch) for aiming, and an A2212 1000 KV brushless motor driven by an ESC (J3) for an **open-loop** paddle swing. Deploy target is a Raspberry Pi 4 with an Adafruit PCA9685 PWM HAT at I2C `0x40` (pan=ch0, tilt=ch1, BLDC ESC=ch2). Single Logitech webcam at `/dev/video0` — depth is recovered monocularly from apparent ball radius.
 
-**`V2_PLAN.md` is the source of truth** for module specs, wave structure, and hardware mapping. Read it before adding new modules; the existing source only covers the `aim.py` slice.
+**`docs/V2_PLAN.md` is the source of truth** for module specs, wave structure, and hardware mapping. Read it before adding new modules; the existing source only covers the `aim.py` slice. [`docs/implementation-plan.md`](docs/implementation-plan.md) is the actionable build checklist derived from it.
 
 ## Common commands
 
@@ -22,7 +22,7 @@ uv run pytest tests/test_aim.py::TestAimControllerCompute::test_directly_forward
 uv run pytest -m unit                      # by marker (unit / integration / perf / adapter)
 
 uv run mypy src/                           # strict mode, with pydantic.mypy plugin
-uv run ruff check src/                     # lint (line-length 100, target py311)
+uv run ruff check src/                     # lint (line-length 100, target py313)
 uv run ruff format src/
 
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg   # one-time hook install
@@ -71,8 +71,8 @@ Controllers (e.g. `AimController`) are **stateless apart from injected configura
 
 ### Gitflow
 
-Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by commitizen (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `chore:`, `docs:`). Current state: `feature/aim` is ahead of `develop`; the plan is to merge it once the pydantic refactor is verified, then cut `feature/v2-control` from `develop` for the wave-based module build-out described in `V2_PLAN.md` §5.
+Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by commitizen (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `chore:`, `docs:`). Current state: `feature/aim` carries the aim module + pydantic v2 refactor (already committed); the plan is to merge it to `develop` once Wave 1 modules land, then cut `feature/v2-control` from `develop` for Waves 2–3 as described in [`docs/implementation-plan.md`](docs/implementation-plan.md).
 
 ## Python version note
 
-`.python-version` pins 3.10 for local dev, but `pyproject` targets 3.11 (mypy/ruff), pre-commit hooks run under 3.13, and the Pi runs Bookworm's 3.11. Code must work on 3.10+; don't use 3.11-only syntax.
+`pyproject.toml` requires Python ≥3.13 (mypy and ruff both target py313). Pre-commit hooks also run under 3.13. `.python-version` still pins 3.10 — treat that as stale; use the system 3.13 via `uv` instead. Pi deployment target (Bookworm 3.11) is not yet aligned with the project's 3.13 floor and will need to be reconciled before hardware rollout.
