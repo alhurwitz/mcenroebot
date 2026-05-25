@@ -15,8 +15,8 @@ Actionable, wave-by-wave execution plan derived from [`V2_PLAN.md`](V2_PLAN.md).
 | Dep manager | `uv` (never hand-edit `pyproject.toml` deps) |
 | Coverage floor | 85% (aim ≥95% on pure-math modules) |
 | Current branch | `feature/aim` |
-| Done | `aim/` package (committed `632a8e9` + `56950c4`), `clock/` package (committed `56950c4`); 76 tests, 100% coverage |
-| Next | Wave 1 — camera / ball / drivers |
+| Done | Wave 1 complete: `aim/`, `clock/`, `camera/`, `ball/`, `drivers/{servo,bldc}/` packages all landed; 237 tests pass, 6 correctly skipped (pi-only), 99%+ coverage |
+| Next | Wave 1 close — merge `feature/aim` → `develop`, cut `feature/v2-control`, then Wave 2 (predictor / swing / calibrate) |
 | Structure | Each component is a **package** under `src/mcenroebot/<name>/` (`__init__.py`, split files by responsibility); tests mirror at `tests/test_<name>/test_<concern>.py` |
 
 ### Module dependency graph
@@ -71,11 +71,11 @@ Each module is a **package** under `src/mcenroebot/<name>/` (`__init__.py` + spl
 
 | # | Package | Status | Public surface | Tests required |
 | --- | --- | --- | --- | --- |
-| 1A | `aim/` | ✅ done | `AimController`, `Position3D`, `ServoAngles`, `TurretGeometry` (pre-existing; split into `value_objects.py` + `controller.py`) | n/a — already covered |
-| 1B | `clock/` | ✅ done | `Clock(Protocol)`, `SystemClock`, `FakeClock` (`now`, `async sleep`, `.advance`, `.elapsed`); files `protocol.py`, `system.py`, `fake.py` | Protocol compliance; monotonicity; `FakeClock.sleep` non-blocking; `SystemClock.sleep` real-time; negative durations raise `ValueError` |
-| 1C | `camera/` | ⏳ next | `CameraIntrinsics` (`fx_px`, `fy_px`, `cx_px`, `cy_px`, `distortion`, `image_width`, `image_height`) + `pixel_to_ray(u, v)` helper | Round-trip a known projection; default distortion is zero; `ValidationError` on negative focal length |
-| 1D | `ball/` | ⏳ (after camera) | `BallObservation`, `BallState`, `StrikePrediction`, `PixelObservation` (frozen pydantic); `DepthEstimator(Protocol)`, `BallRadiusDepthEstimator`; stubs `StereoDepthEstimator`/`RealSenseDepthEstimator` raising `NotImplementedError` | Round-trip known geometry through `BallRadiusDepthEstimator`; frozen-ness of all models; `confidence` ∈ `[0, 1]`; `ValidationError` on negative `radius_px` |
-| 1E | `drivers/servo/`, `drivers/bldc/` | ⏳ | `ServoDriver(Protocol)` + `PCA9685ServoDriver` (lazy `adafruit_servokit` import) + `MockServoDriver`; `BLDCDriver(Protocol)` + `PCA9685BLDCDriver` (throttle 0→1000 µs, 1→2000 µs) + `MockBLDCDriver` | Mock drivers record calls in order; real driver doesn't require Adafruit libs at import-time; real-driver smoke tests are `@pytest.mark.integration`; throttle outside `[0, 1]` rejected; `set_throttle` pre-arm raises `RuntimeError` |
+| 1A | `aim/` | ✅ done (`56950c4`) | `AimController`, `Position3D`, `ServoAngles`, `TurretGeometry` split into `value_objects.py` + `controller.py` | n/a — already covered |
+| 1B | `clock/` | ✅ done (`56950c4`) | `Clock(Protocol)`, `SystemClock`, `FakeClock` split into `protocol.py`, `system.py`, `fake.py` | Protocol compliance; monotonicity; `FakeClock.sleep` non-blocking; `SystemClock.sleep` real-time; negative durations raise `ValueError` |
+| 1C | `camera/` | ✅ done (`3698c8c`) | `CameraIntrinsics` + `pixel_to_ray(u, v)` in `intrinsics.py` | Round-trip a known projection; default distortion is zero; `ValidationError` on negative focal length |
+| 1D | `ball/` | ✅ done (`9b305d5`) | `BallObservation`, `BallState`, `StrikePrediction`, `PixelObservation` in `value_objects.py`; `DepthEstimator(Protocol)`, `BallRadiusDepthEstimator`, stubs in `depth.py` | Round-trip known geometry through `BallRadiusDepthEstimator`; frozen-ness of all models; `confidence` ∈ `[0, 1]`; `ValidationError` on negative `radius_px` |
+| 1E | `drivers/servo/`, `drivers/bldc/` | ✅ done (`b9a9fb0` deps, `547c1be` code) | `ServoDriver(Protocol)` + `PCA9685ServoDriver` (lazy `adafruit_servokit` import) + `MockServoDriver`; `BLDCDriver(Protocol)` + `PCA9685BLDCDriver` (throttle 0→1000 µs, 1→2000 µs) + `MockBLDCDriver` | Mock drivers record calls in order; real driver doesn't require Adafruit libs at import-time; real-driver smoke tests are `@pytest.mark.integration` and skipped off-Pi; throttle outside `[0, 1]` rejected; `set_throttle` pre-arm raises `RuntimeError` |
 
 **Commits** (one per package):
 ```
