@@ -10,6 +10,13 @@ dependencies = [
     "pytest-asyncio>=1.3.0",
 ]
 
+[project.optional-dependencies]
+pi = [
+    "adafruit-blinka>=9.1.0",
+    "adafruit-circuitpython-pca9685>=3.4.22",
+    "adafruit-circuitpython-servokit>=1.3.24",
+]
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.6.0",
@@ -74,6 +81,13 @@ module = [
     # Phase 8: MCP SDK and uvicorn (no type stubs in pre-commit env)
     "mcp", "mcp.*",
     "uvicorn", "uvicorn.*",
+    # Pi-only Adafruit hardware libraries (installed via `uv sync --extra pi`).
+    # On the dev Mac these are absent, so mypy can't resolve them — that's fine,
+    # the real driver code is lazy-imported and gated.
+    "adafruit_servokit",
+    "adafruit_pca9685",
+    "board",
+    "busio",
 ]
 ignore_missing_imports = true
 
@@ -116,7 +130,7 @@ addopts = [
     "--import-mode=importlib", # modern import mode; works with src/ layout
     "--cov=mcenroebot",
     "--cov-branch",
-    "--cov-report=term-missing:skip-covered",
+    "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
 ]
@@ -139,6 +153,7 @@ relative_files = true                   # stable paths across CI/local
 omit = [
     "*/tests/*",
     "*/__main__.py",
+    "*/__init__.py",
 ]
 
 [tool.coverage.paths]

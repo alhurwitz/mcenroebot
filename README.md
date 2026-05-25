@@ -45,11 +45,13 @@ timing envelope.
 
 | Component                                                         | State                                |
 |-------------------------------------------------------------------|--------------------------------------|
-| `aim.py` (AimController, Position3D, ServoAngles, TurretGeometry) | ✅ Implemented, 30 tests, pydantic v2 |
-| `clock.py`, `ball.py`, `camera.py`                                | ⏳ Wave 1 (planned)                   |
-| `drivers/servo.py`, `drivers/bldc.py`                             | ⏳ Wave 1 (planned)                   |
-| `predictor.py`, `swing.py`, `calibrate.py`                        | ⏳ Wave 2 (planned)                   |
-| `coordinator.py` (top-level rally loop)                           | ⏳ Wave 3 (planned)                   |
+| `aim/` (AimController, Position3D, ServoAngles, TurretGeometry)   | ✅ Wave 1                             |
+| `clock/` (Clock, SystemClock, FakeClock)                          | ✅ Wave 1                             |
+| `camera/` (CameraIntrinsics, pixel_to_ray)                        | ✅ Wave 1                             |
+| `ball/` (BallObservation/State/Prediction, BallRadiusDepth)       | ✅ Wave 1                             |
+| `drivers/servo/`, `drivers/bldc/` (Protocols + PCA9685 + Mocks)   | ✅ Wave 1                             |
+| `predictor/`, `swing/`, `calibrate/`                              | ⏳ Wave 2                             |
+| `coordinator/` (top-level rally loop)                             | ⏳ Wave 3                             |
 | Pi deployment                                                     | ⏳ Post-Wave 3                        |
 
 See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the wave-by-wave build schedule and

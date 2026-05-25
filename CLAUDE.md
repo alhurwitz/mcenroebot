@@ -35,6 +35,14 @@ Pre-commit runs ruff, ruff-format, mypy, detect-secrets, and commitizen on commi
 
 ## Architecture and conventions
 
+### Package layout (mandatory)
+
+**Every logical component under `src/mcenroebot/` is a Python package — a directory with `__init__.py`, never a single flat `.py` file.** Inside, split by responsibility (Protocol, real impl, mock impl, value objects, demo) into focused files. Re-export the public API via `__init__.py` so callers can keep writing `from mcenroebot.<name> import Foo`. Provide a `__main__.py` if the package has a runnable demo.
+
+Tests mirror this 1:1 under `tests/test_<name>/test_<concern>.py`.
+
+Existing examples to copy from: `src/mcenroebot/aim/` and `src/mcenroebot/clock/`.
+
 ### Coordinate system (used everywhere)
 
 - Origin: J1 yaw axis, at J2 pitch pivot height
