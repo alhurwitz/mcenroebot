@@ -35,15 +35,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
 __all__ = [
+    "AimController",
     "Position3D",
     "ServoAngles",
     "TurretGeometry",
-    "AimController",
 ]
 
 
@@ -87,9 +86,7 @@ class ServoAngles:
     def __post_init__(self) -> None:
         for name, value in (("yaw_deg", self.yaw_deg), ("pitch_deg", self.pitch_deg)):
             if not (0.0 <= value <= 180.0):
-                raise ValueError(
-                    f"{name}={value} out of MG996R servo range [0, 180]"
-                )
+                raise ValueError(f"{name}={value} out of MG996R servo range [0, 180]")
 
 
 @dataclass(frozen=True)
@@ -128,7 +125,7 @@ class AimController:
     (90.0, 90.0)
     """
 
-    def __init__(self, geometry: Optional[TurretGeometry] = None) -> None:
+    def __init__(self, geometry: TurretGeometry | None = None) -> None:
         self.geometry: TurretGeometry = geometry or TurretGeometry()
 
     # ----- Public API -----
@@ -137,7 +134,7 @@ class AimController:
         """Return True if the target is within paddle reach."""
         return target.magnitude <= self.geometry.arm_length_m
 
-    def compute(self, target: Position3D) -> Optional[ServoAngles]:
+    def compute(self, target: Position3D) -> ServoAngles | None:
         """Compute the (J1, J2) angles needed to point at the target.
 
         Returns

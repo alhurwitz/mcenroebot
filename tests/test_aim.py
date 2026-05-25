@@ -14,7 +14,6 @@ from mcenroebot.aim import (
     TurretGeometry,
 )
 
-
 # --------------------------------------------------------------------------- #
 # Position3D
 # --------------------------------------------------------------------------- #
@@ -237,3 +236,53 @@ class TestAimControllerCustomGeometry:
         assert angles is not None
         assert angles.yaw_deg == pytest.approx(60.0)
         assert angles.pitch_deg == pytest.approx(70.0)
+
+
+# --------------------------------------------------------------------------- #
+# Immutability — both value objects should be frozen so they can be hashed
+# and safely shared between threads/coroutines.
+# --------------------------------------------------------------------------- #
+
+
+class TestImmutability:
+    def test_servoangles_is_frozen(self) -> None:
+        a = ServoAngles(yaw_deg=10.0, pitch_deg=20.0)
+        with pytest.raises(Exception):
+            a.yaw_deg = 99.0  # type: ignore[misc]
+
+    def test_turretgeometry_is_frozen(self) -> None:
+        g = TurretGeometry()
+        with pytest.raises(Exception):
+            g.arm_length_m = 0.5  # type: ignore[misc]
+
+    def test_position3d_is_hashable(self) -> None:
+        # Frozen dataclasses become hashable, which is useful for caching
+        # aim solutions keyed on (position, geometry).
+        p = Position3D(1.0, 2.0, 3.0)
+        assert hash(p) == hash(Position3D(1.0, 2.0, 3.0))
+
+
+# --------------------------------------------------------------------------- #
+# Demo — covers the _demo() function so coverage stays high. The demo is a
+# CLI sanity-check, but exercising it catches regressions in the print path
+# and in case-list construction.
+# --------------------------------------------------------------------------- #
+
+
+class TestDemo:
+    def test_demo_runs_without_error(self, capsys: pytest.CaptureFixture[str]) -> None:
+        from mcenroebot.aim import _demo
+
+        _demo()
+        captured = capsys.readouterr()
+        # Every demo case header should appear in stdout.
+        for label in (
+            "Forward, paddle-height",
+            "Forward and high",
+            "Forward and left",
+            "Forward and right",
+            "Out of reach",
+        ):
+            assert label in captured.out, f"Demo missing case: {label!r}"
+        # The OUT OF REACH branch should print, since the last case is unreachable.
+        assert "OUT OF REACH" in captured.out
