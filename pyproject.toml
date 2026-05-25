@@ -139,6 +139,7 @@ relative_files = true                   # stable paths across CI/local
 omit = [
     "*/tests/*",
     "*/__main__.py",
+    "*/__init__.py",
 ]
 
 [tool.coverage.paths]
