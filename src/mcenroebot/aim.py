@@ -34,9 +34,9 @@ Simplifications for V1
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
 __all__ = [
     "AimController",
@@ -46,12 +46,13 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True)
-class Position3D:
+class Position3D(BaseModel):
     """A 3D point in the robot frame, in meters.
 
     See module docstring for the coordinate convention.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     x: float
     y: float
@@ -72,25 +73,28 @@ class Position3D:
         return np.array([self.x, self.y, self.z], dtype=float)
 
 
-@dataclass(frozen=True)
-class ServoAngles:
+class ServoAngles(BaseModel):
     """Servo angles for the aim turret, in degrees.
 
     Both angles are clamped to the MG996R's [0, 180] range; values
-    outside that range raise ValueError.
+    outside that range raise pydantic.ValidationError (which wraps the
+    underlying ValueError so the original message is preserved).
     """
+
+    model_config = ConfigDict(frozen=True)
 
     yaw_deg: float
     pitch_deg: float
 
-    def __post_init__(self) -> None:
-        for name, value in (("yaw_deg", self.yaw_deg), ("pitch_deg", self.pitch_deg)):
-            if not (0.0 <= value <= 180.0):
-                raise ValueError(f"{name}={value} out of MG996R servo range [0, 180]")
+    @field_validator("yaw_deg", "pitch_deg")
+    @classmethod
+    def _check_servo_range(cls, value: float, info: ValidationInfo) -> float:
+        if not (0.0 <= value <= 180.0):
+            raise ValueError(f"{info.field_name}={value} out of MG996R servo range [0, 180]")
+        return value
 
 
-@dataclass(frozen=True)
-class TurretGeometry:
+class TurretGeometry(BaseModel):
     """Fixed physical parameters of the V2 turret.
 
     Attributes
@@ -104,6 +108,8 @@ class TurretGeometry:
     pitch_neutral_deg : float
         Servo angle that puts the sweep plane vertical (BLDC shaft along Y).
     """
+
+    model_config = ConfigDict(frozen=True)
 
     arm_length_m: float = 0.20
     yaw_neutral_deg: float = 90.0
@@ -119,7 +125,7 @@ class AimController:
     Example
     -------
     >>> ctrl = AimController()
-    >>> target = Position3D(0.18, 0.0, 0.0)  # 18cm directly forward
+    >>> target = Position3D(x=0.18, y=0.0, z=0.0)  # 18cm directly forward
     >>> angles = ctrl.compute(target)
     >>> angles.yaw_deg, angles.pitch_deg
     (90.0, 90.0)
@@ -178,11 +184,11 @@ def _demo() -> None:
     """
     controller = AimController()
     cases = [
-        ("Forward, paddle-height", Position3D(0.18, 0.0, 0.0)),
-        ("Forward and high", Position3D(0.10, 0.0, 0.15)),
-        ("Forward and left", Position3D(0.13, 0.13, 0.0)),
-        ("Forward and right", Position3D(0.13, -0.13, 0.0)),
-        ("Out of reach", Position3D(0.5, 0.5, 0.5)),
+        ("Forward, paddle-height", Position3D(x=0.18, y=0.0, z=0.0)),
+        ("Forward and high", Position3D(x=0.10, y=0.0, z=0.15)),
+        ("Forward and left", Position3D(x=0.13, y=0.13, z=0.0)),
+        ("Forward and right", Position3D(x=0.13, y=-0.13, z=0.0)),
+        ("Out of reach", Position3D(x=0.5, y=0.5, z=0.5)),
     ]
     arm = controller.geometry.arm_length_m
     for label, target in cases:

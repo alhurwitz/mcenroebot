@@ -6,6 +6,7 @@ import math
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from mcenroebot.aim import (
     AimController,
@@ -21,16 +22,16 @@ from mcenroebot.aim import (
 
 class TestPosition3D:
     def test_horizontal_distance_uses_xy_only(self) -> None:
-        p = Position3D(3.0, 4.0, 99.0)
+        p = Position3D(x=3.0, y=4.0, z=99.0)
         assert p.horizontal_distance == pytest.approx(5.0)
 
     def test_magnitude_uses_all_three_components(self) -> None:
-        p = Position3D(1.0, 2.0, 2.0)
+        p = Position3D(x=1.0, y=2.0, z=2.0)
         # sqrt(1 + 4 + 4) = 3
         assert p.magnitude == pytest.approx(3.0)
 
     def test_as_array_returns_length_three_float_array(self) -> None:
-        p = Position3D(1.0, -2.0, 3.5)
+        p = Position3D(x=1.0, y=-2.0, z=3.5)
         arr = p.as_array()
         assert isinstance(arr, np.ndarray)
         assert arr.shape == (3,)
@@ -38,8 +39,8 @@ class TestPosition3D:
         np.testing.assert_allclose(arr, [1.0, -2.0, 3.5])
 
     def test_is_frozen(self) -> None:
-        p = Position3D(0.0, 0.0, 0.0)
-        with pytest.raises(Exception):
+        p = Position3D(x=0.0, y=0.0, z=0.0)
+        with pytest.raises(ValidationError):
             p.x = 1.0  # type: ignore[misc]
 
 
@@ -68,7 +69,10 @@ class TestServoAngles:
         ],
     )
     def test_out_of_range_raises(self, yaw: float, pitch: float) -> None:
-        with pytest.raises(ValueError, match=r"out of MG996R servo range"):
+        # Pydantic wraps the underlying ValueError; the original message is
+        # preserved inside ValidationError's str repr, so the regex still
+        # finds it.
+        with pytest.raises(ValidationError, match=r"out of MG996R servo range"):
             ServoAngles(yaw_deg=yaw, pitch_deg=pitch)
 
 
@@ -102,17 +106,17 @@ class TestAimControllerReachability:
         self.ctrl = AimController()  # default geometry, arm=0.20m
 
     def test_target_inside_arm_is_reachable(self) -> None:
-        assert self.ctrl.is_reachable(Position3D(0.10, 0.0, 0.0))
+        assert self.ctrl.is_reachable(Position3D(x=0.10, y=0.0, z=0.0))
 
     def test_target_exactly_at_arm_length_is_reachable(self) -> None:
         # On the boundary should be reachable (<= comparison).
-        assert self.ctrl.is_reachable(Position3D(0.20, 0.0, 0.0))
+        assert self.ctrl.is_reachable(Position3D(x=0.20, y=0.0, z=0.0))
 
     def test_target_beyond_arm_length_is_unreachable(self) -> None:
-        assert not self.ctrl.is_reachable(Position3D(0.21, 0.0, 0.0))
+        assert not self.ctrl.is_reachable(Position3D(x=0.21, y=0.0, z=0.0))
 
     def test_unreachable_compute_returns_none(self) -> None:
-        assert self.ctrl.compute(Position3D(0.5, 0.5, 0.5)) is None
+        assert self.ctrl.compute(Position3D(x=0.5, y=0.5, z=0.5)) is None
 
 
 # --------------------------------------------------------------------------- #
@@ -125,31 +129,31 @@ class TestAimControllerCompute:
         self.ctrl = AimController()
 
     def test_directly_forward_gives_neutral_pose(self) -> None:
-        angles = self.ctrl.compute(Position3D(0.18, 0.0, 0.0))
+        angles = self.ctrl.compute(Position3D(x=0.18, y=0.0, z=0.0))
         assert angles is not None
         assert angles.yaw_deg == pytest.approx(90.0)
         assert angles.pitch_deg == pytest.approx(90.0)
 
     def test_ball_to_the_left_yaws_left(self) -> None:
         # +Y is left, so atan2(+y, +x) > 0 -> yaw > 90.
-        angles = self.ctrl.compute(Position3D(0.10, 0.10, 0.0))
+        angles = self.ctrl.compute(Position3D(x=0.10, y=0.10, z=0.0))
         assert angles is not None
         assert angles.yaw_deg > 90.0
         assert angles.pitch_deg == pytest.approx(90.0)
 
     def test_ball_to_the_right_yaws_right(self) -> None:
-        angles = self.ctrl.compute(Position3D(0.10, -0.10, 0.0))
+        angles = self.ctrl.compute(Position3D(x=0.10, y=-0.10, z=0.0))
         assert angles is not None
         assert angles.yaw_deg < 90.0
         assert angles.pitch_deg == pytest.approx(90.0)
 
     def test_ball_high_pitches_up(self) -> None:
-        angles = self.ctrl.compute(Position3D(0.10, 0.0, 0.10))
+        angles = self.ctrl.compute(Position3D(x=0.10, y=0.0, z=0.10))
         assert angles is not None
         assert angles.pitch_deg > 90.0
 
     def test_ball_low_pitches_down(self) -> None:
-        angles = self.ctrl.compute(Position3D(0.10, 0.0, -0.10))
+        angles = self.ctrl.compute(Position3D(x=0.10, y=0.0, z=-0.10))
         assert angles is not None
         assert angles.pitch_deg < 90.0
 
@@ -157,22 +161,22 @@ class TestAimControllerCompute:
         "target,expected_yaw,expected_pitch",
         [
             # Forward at paddle height -> neutral pose.
-            (Position3D(0.18, 0.0, 0.0), 90.0, 90.0),
+            (Position3D(x=0.18, y=0.0, z=0.0), 90.0, 90.0),
             # 45° left, level: yaw = 90 + 45 = 135.
             (
-                Position3D(0.10, 0.10, 0.0),
+                Position3D(x=0.10, y=0.10, z=0.0),
                 90.0 + math.degrees(math.atan2(0.10, 0.10)),
                 90.0,
             ),
             # 45° right, level: yaw = 90 - 45 = 45.
             (
-                Position3D(0.10, -0.10, 0.0),
+                Position3D(x=0.10, y=-0.10, z=0.0),
                 90.0 + math.degrees(math.atan2(-0.10, 0.10)),
                 90.0,
             ),
             # 45° up, no yaw: pitch = 135.
             (
-                Position3D(0.10, 0.0, 0.10),
+                Position3D(x=0.10, y=0.0, z=0.10),
                 90.0,
                 90.0 + math.degrees(math.atan2(0.10, 0.10)),
             ),
@@ -190,14 +194,14 @@ class TestAimControllerCompute:
         assert angles.pitch_deg == pytest.approx(expected_pitch, abs=1e-6)
 
     def test_output_is_always_servoangles_instance(self) -> None:
-        angles = self.ctrl.compute(Position3D(0.05, 0.05, 0.05))
+        angles = self.ctrl.compute(Position3D(x=0.05, y=0.05, z=0.05))
         assert isinstance(angles, ServoAngles)
 
     def test_yaw_clamped_to_servo_range_for_target_behind_robot(self) -> None:
         # A target with negative x ("behind") would compute yaw outside
         # [0, 180]. The controller must clamp; we verify the result is
         # always a valid ServoAngles.
-        angles = self.ctrl.compute(Position3D(-0.05, 0.05, 0.0))
+        angles = self.ctrl.compute(Position3D(x=-0.05, y=0.05, z=0.0))
         assert angles is not None
         assert 0.0 <= angles.yaw_deg <= 180.0
         assert 0.0 <= angles.pitch_deg <= 180.0
@@ -205,7 +209,7 @@ class TestAimControllerCompute:
     def test_zero_target_is_reachable_and_neutral_ish(self) -> None:
         # The (0, 0, 0) point is "at the origin" — a degenerate case but
         # the function should still return a valid ServoAngles.
-        angles = self.ctrl.compute(Position3D(0.0, 0.0, 0.0))
+        angles = self.ctrl.compute(Position3D(x=0.0, y=0.0, z=0.0))
         assert angles is not None
         # yaw = atan2(0, 0) = 0 by convention -> 90° + 0 = 90°.
         # pitch = atan2(0, 0) = 0 -> 90°.
@@ -222,7 +226,7 @@ class TestAimControllerCustomGeometry:
     def test_smaller_arm_length_shrinks_reachable_set(self) -> None:
         small_arm = AimController(TurretGeometry(arm_length_m=0.10))
         # 15 cm forward is inside default reach but outside this one.
-        target = Position3D(0.15, 0.0, 0.0)
+        target = Position3D(x=0.15, y=0.0, z=0.0)
         assert not small_arm.is_reachable(target)
         assert small_arm.compute(target) is None
 
@@ -232,7 +236,7 @@ class TestAimControllerCustomGeometry:
         custom = AimController(
             TurretGeometry(arm_length_m=0.20, yaw_neutral_deg=60.0, pitch_neutral_deg=70.0)
         )
-        angles = custom.compute(Position3D(0.18, 0.0, 0.0))
+        angles = custom.compute(Position3D(x=0.18, y=0.0, z=0.0))
         assert angles is not None
         assert angles.yaw_deg == pytest.approx(60.0)
         assert angles.pitch_deg == pytest.approx(70.0)
@@ -247,19 +251,19 @@ class TestAimControllerCustomGeometry:
 class TestImmutability:
     def test_servoangles_is_frozen(self) -> None:
         a = ServoAngles(yaw_deg=10.0, pitch_deg=20.0)
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             a.yaw_deg = 99.0  # type: ignore[misc]
 
     def test_turretgeometry_is_frozen(self) -> None:
         g = TurretGeometry()
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             g.arm_length_m = 0.5  # type: ignore[misc]
 
     def test_position3d_is_hashable(self) -> None:
-        # Frozen dataclasses become hashable, which is useful for caching
+        # Frozen pydantic models are hashable, which is useful for caching
         # aim solutions keyed on (position, geometry).
-        p = Position3D(1.0, 2.0, 3.0)
-        assert hash(p) == hash(Position3D(1.0, 2.0, 3.0))
+        p = Position3D(x=1.0, y=2.0, z=3.0)
+        assert hash(p) == hash(Position3D(x=1.0, y=2.0, z=3.0))
 
 
 # --------------------------------------------------------------------------- #
