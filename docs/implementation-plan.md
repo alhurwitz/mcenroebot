@@ -14,9 +14,9 @@ Actionable, wave-by-wave execution plan derived from [`V2_PLAN.md`](V2_PLAN.md).
 | Python | ≥3.13 (per `pyproject.toml`; Pi/Bookworm 3.11 target not yet reconciled) |
 | Dep manager | `uv` (never hand-edit `pyproject.toml` deps) |
 | Coverage floor | 85% (aim ≥95% on pure-math modules) |
-| Current branch | `feature/aim` |
-| Done | Wave 1 complete: `aim/`, `clock/`, `camera/`, `ball/`, `drivers/{servo,bldc}/` packages all landed; 237 tests pass, 6 correctly skipped (pi-only), 99%+ coverage |
-| Next | Wave 1 close — merge `feature/aim` → `develop`, cut `feature/v2-control`, then Wave 2 (predictor / swing / calibrate) |
+| Current branch | `feature/v2-control` |
+| Done | **All four waves complete.** `aim/`, `clock/`, `camera/`, `ball/`, `drivers/{servo,bldc}/`, `predictor/`, `swing/`, `calibrate/`, `coordinator/` packages all landed. **343 tests pass**, 6 correctly skipped (pi-only), 94%+ project coverage |
+| Next | Open PR `feature/v2-control` → `develop`; Pi deployment after merge |
 | Structure | Each component is a **package** under `src/mcenroebot/<name>/` (`__init__.py`, split files by responsibility); tests mirror at `tests/test_<name>/test_<concern>.py` |
 
 ### Module dependency graph
@@ -103,97 +103,29 @@ Pi-only dependencies (`adafruit-blinka`, `adafruit-circuitpython-pca9685`, `adaf
 
 ---
 
-## 3. Wave 2 — modules that depend on Wave 1 (parallelizable, 3 streams)
+## 3. Wave 2 — modules that depend on Wave 1 (all ✅ done)
 
-### Stream A — `predictor.py` (depends on `ball.py`)
-
-`TrajectoryPredictor`:
-- Rolling buffer (`buffer_size=16` default) of `BallObservation`.
-- Fits a 3D ballistic trajectory: constant velocity X, Y; gravity (`-g`) on Z. Weighted least squares with exponential decay (`weight_halflife_s=0.1` default).
-- `add(obs)`, `current_state() -> BallState | None`, `predict_strike(strike_plane_x) -> StrikePrediction | None`.
-- Constructor: `buffer_size: int = 16`, `gravity_mps2: float = 9.81`, `weight_halflife_s: float = 0.1`, `min_observations: int = 3`.
-
-**Tests**
-- Synthetic ballistic trajectory recovers state within tolerance.
-- Fewer than `min_observations` returns `None`.
-- Ball moving away from strike plane returns `None`.
-- `confidence` increases with observation count, decreases with residual error.
-- Old-noisy + new-clean observations bias toward new (weighting works).
-
-**Commit:** `feat(predictor): add TrajectoryPredictor with weighted ballistic fit`
-
-### Stream B — `swing.py` (depends on `drivers/bldc.py`, `clock.py`)
-
-`SwingProfile` (frozen `BaseModel`):
-- `ramp_up_ms: float = Field(gt=0)`
-- `hold_ms: float = Field(ge=0)`
-- `ramp_down_ms: float = Field(gt=0)`
-- `peak_throttle: float = Field(gt=0.0, le=1.0)`
-- `total_ms` property.
-
-`SwingController`:
-- `__init__(driver: BLDCDriver, clock: Clock)`.
-- `async __aenter__` / `async __aexit__` — disarms on exit even if `fire` raises.
-- `arm()`, `async fire(profile)`.
-
-**Tests** (with `MockBLDCDriver` + `FakeClock`)
-- `fire` without `arm` raises `RuntimeError`.
-- `throttle_history` matches profile shape within tolerance (sample at N points).
-- Total elapsed `FakeClock` time matches `profile.total_ms`.
-- Context exit disarms even when `fire` raises.
-
-**Commit:** `feat(swing): add SwingController + SwingProfile open-loop control`
-
-### Stream C — `calibrate.py` (depends on `drivers/bldc.py`, `clock.py`)
-
-`EscCalibrator`:
-- `__init__(driver, clock, prompt_fn=input)`.
-- `async run()` sequence: power-off prompt → `set_throttle(1.0)` → power-on prompt → wait for beeps → `set_throttle(0.0)` → wait for beeps → `disarm()`.
-
-**Tests** (with `MockBLDCDriver`, `FakeClock`, and a recording `prompt_fn`)
-- Throttle sequence is `[1.0, 0.0]` then `disarm` in that order.
-- Prompts appear between the correct throttle steps.
-
-**Commit:** `feat(calibrate): add EscCalibrator one-shot routine`
+| # | Package | Status | Notes |
+| --- | --- | --- | --- |
+| 2A | `predictor/` | ✅ done (`a8a0c4e`) | `TrajectoryPredictor` with per-axis weighted least-squares fit (gravity on RHS for Z), exponential-decay weighting, confidence ∈ [0, 1], 47 tests covering recovery, gating, moving-away, weighting bias |
+| 2B | `swing/` | ✅ done (`95d1381`) | `SwingProfile` (frozen, validated bounds) + `SwingController` (async context manager, lazy arm, tick-cadence envelope sampling, always ends at throttle 0, disarms on exit even when fire raises) |
+| 2C | `calibrate/` | ✅ done (`0847c39`) | `EscCalibrator` one-shot routine: prompt → set_throttle(1.0) → prompt → settle → set_throttle(0.0) → prompt → settle → disarm; try/finally guarantees disarm on KeyboardInterrupt |
 
 ---
 
-## 4. Wave 3 — integration (single stream)
+## 4. Wave 3 — integration (✅ done)
 
-### `coordinator.py`
+| # | Package | Status | Notes |
+| --- | --- | --- | --- |
+| 3 | `coordinator/` | ✅ done (`2f3ba26`) | `RallyCoordinator` wires `observations → TrajectoryPredictor → AimController → ServoDriver → SwingController`. Lazy swing arming on first reachable strike prediction. `rearm_min_interval_s` enforces one-fire-per-arc. 18 integration tests with mocks + `FakeClock`. |
 
-`RallyCoordinator` wires `observations → TrajectoryPredictor → AimController → SwingController`.
-
-Constructor:
-- `aim: AimController`
-- `predictor: TrajectoryPredictor`
-- `servo_driver: ServoDriver`
-- `swing: SwingController`
-- `clock: Clock`
-- `strike_plane_x: float = 0.0`
-- `swing_latency_s: float = 0.05`
-- `servo_yaw_channel: int = 0`
-- `servo_pitch_channel: int = 1`
-
-Methods:
-- `async step(obs: BallObservation)` — push obs, update aim, decide whether to fire.
-- `async run(stream: AsyncIterator[BallObservation])` — pull loop calling `step`.
-
-**Integration tests** (all mocks + `FakeClock`)
-- Synthetic ballistic stream → servos receive aim updates → swing fires exactly once at `impact_time - swing_latency_s`.
-- Unreachable aim target: aim returns `None`; no swing.
-- Buffer below `min_observations`: no swing.
-- One swing per "pass" — strike does not retrigger on subsequent observations of the same arc.
-
-**Commit:** `feat(coordinator): wire predictor → aim → swing in RallyCoordinator`
-
-### Final gates
+### Final gates (all green)
 
 ```bash
-uv run pytest          # full suite green, coverage ≥85%
-uv run mypy src/       # strict clean
-uv run ruff check src/ # clean
+uv run pytest          # 343 passed, 6 skipped (pi-only), 94%+ project coverage
 ```
+
+Pre-commit hooks (ruff, ruff-format, mypy strict, detect-secrets, commitizen, pytest) pass on every commit.
 
 Open PR `feature/v2-control` → `develop`.
 

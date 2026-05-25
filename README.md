@@ -50,9 +50,11 @@ timing envelope.
 | `camera/` (CameraIntrinsics, pixel_to_ray)                        | ✅ Wave 1                             |
 | `ball/` (BallObservation/State/Prediction, BallRadiusDepth)       | ✅ Wave 1                             |
 | `drivers/servo/`, `drivers/bldc/` (Protocols + PCA9685 + Mocks)   | ✅ Wave 1                             |
-| `predictor/`, `swing/`, `calibrate/`                              | ⏳ Wave 2                             |
-| `coordinator/` (top-level rally loop)                             | ⏳ Wave 3                             |
-| Pi deployment                                                     | ⏳ Post-Wave 3                        |
+| `predictor/` (TrajectoryPredictor, weighted ballistic fit)        | ✅ Wave 2                             |
+| `swing/` (SwingProfile + SwingController, open-loop envelope)     | ✅ Wave 2                             |
+| `calibrate/` (EscCalibrator one-shot routine)                     | ✅ Wave 2                             |
+| `coordinator/` (RallyCoordinator, full pipeline)                  | ✅ Wave 3                             |
+| Pi deployment                                                     | ⏳ Hardware bring-up                  |
 
 See [`docs/implementation-plan.md`](docs/implementation-plan.md) for the wave-by-wave build schedule and
 [`docs/V2_PLAN.md`](docs/V2_PLAN.md) for the original design.
