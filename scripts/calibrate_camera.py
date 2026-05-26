@@ -258,7 +258,8 @@ def solve(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    description = (__doc__ or "").splitlines()[0]
+    p = argparse.ArgumentParser(description=description)
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pc = sub.add_parser("capture", help="grab calibration frames from a webcam")

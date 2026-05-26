@@ -145,7 +145,7 @@ Open PR `feature/v2-control` → `develop`.
 
 These are flagged in `V2_PLAN.md §8`; they must be resolved before the system runs end-to-end:
 
-- **Camera intrinsics are unknown.** `BallRadiusDepthEstimator` needs real `CameraIntrinsics`. Plan: add `scripts/calibrate_camera.py` (OpenCV checkerboard) during Wave 1 — or, at minimum, ship a placeholder intrinsics object in the demo and document the calibration step.
+- **Camera intrinsics are unknown.** `BallRadiusDepthEstimator` needs real `CameraIntrinsics`. ✅ `scripts/calibrate_camera.py` exists (PEP 723 inline-metadata standalone script — declares its own opencv/numpy/pydantic deps so it doesn't pollute the runtime dependency tree). Two subcommands: `capture` (live webcam preview, SPACE-to-save when a checkerboard is detected) and `solve` (run `cv2.calibrateCamera` over saved frames, write a JSON file that loads directly via `CameraIntrinsics.model_validate_json`). Print a 9×6 checkerboard at 25mm squares, capture 15–25 frames at varied angles, run `solve`. Synthetic smoke test recovers fx/fy/cx/cy to <0.5 px on noise-free projections. Actual calibration still needs to be run against AJ's webcam.
 - **Strike plane location.** Defaults to `x = arm_length_m` (0.20 m forward). Confirm against the physical mount once the turret is assembled.
 - **Swing latency** (`swing_latency_s = 0.05` s) is a guess. First hardware-in-loop test must measure actual mechanical latency and update the default.
 - **Audio / trash-talk** is out of scope for V2. `RallyCoordinator` should expose a hook for a future `audio.py`.
