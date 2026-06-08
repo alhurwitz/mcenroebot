@@ -22,9 +22,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # ---------------------------------------------------------------------------
 
 # MG996R servo body (the aiming servos for yaw + pitch)
-SERVO_W = 40.7  # length of body
-SERVO_D = 19.7  # depth of body
-SERVO_H = 42.9  # height of body (without ear tabs)
+SERVO_W = 40.0  # length of body (measured: Deegoo MG996R)
+SERVO_D = 19.0  # depth of body (measured)
+SERVO_H = 43.0  # height of body, bottom to top of case below the hub (measured)
 SERVO_EAR_THICK = 2.5
 SERVO_EAR_EXTENT = 7.5  # how far ears stick out past the body on each side
 SERVO_EAR_SCREW_D = 4.2  # M4 clearance for servo ear mounting screws
@@ -32,6 +32,8 @@ SERVO_EAR_SCREW_SPACING_X = 49.5  # center-to-center across the long axis
 SERVO_EAR_SCREW_SPACING_Y = 10.0  # center-to-center across the short axis
 SERVO_SHAFT_OFFSET_X = 9.8  # output shaft is offset from body center along X
 SERVO_HORN_CLEAR_R = 12.0  # clearance hole radius for the round servo horn
+SERVO_CLEAR = 0.5  # per-side print clearance so the servo actually slides into the pocket
+SERVO_EXTRA_DEPTH = 2.0  # deepen the pocket so the body fully seats (motor was sticking out)
 
 # A2212 brushless motor (the swing motor)
 BLDC_OD = 28.0  # body outer diameter
@@ -99,10 +101,15 @@ def hole(d, h, sections=48):
 
 def servo_pocket():
     """A negative volume for an MG996R-style servo, centered on its body.
-    Includes the body cavity, ear cutouts, and ear screw holes (clearance)."""
-    body = box((SERVO_W, SERVO_D, SERVO_H + 20))  # extra height so it punches all the way through
-    body.apply_translation([0, 0, 10])  # shift so bottom is at z=-SERVO_H/2 - 10
-    ears = box((SERVO_W + 2 * SERVO_EAR_EXTENT, SERVO_D, SERVO_EAR_THICK + 1))
+    Includes the body cavity (with print clearance + extra depth), ear cutouts,
+    ear screw holes, and wire-relief channels at both narrow ends so the lead
+    can exit whichever way the servo is oriented."""
+    bw = SERVO_W + 2 * SERVO_CLEAR
+    bd = SERVO_D + 2 * SERVO_CLEAR
+    # taller box + lowered floor => the servo seats SERVO_EXTRA_DEPTH deeper
+    body = box((bw, bd, SERVO_H + 20 + SERVO_EXTRA_DEPTH))
+    body.apply_translation([0, 0, 10 - SERVO_EXTRA_DEPTH])
+    ears = box((bw + 2 * SERVO_EAR_EXTENT, bd, SERVO_EAR_THICK + 1))
     ears.apply_translation([0, 0, SERVO_H / 2 - 13])  # roughly where the ears sit on the body
     parts = [body, ears]
     # Ear screw clearance holes (4)
@@ -117,7 +124,19 @@ def servo_pocket():
                 ]
             )
             parts.append(h)
-    return trimesh.util.concatenate(parts)
+    # Wire-relief channels through both narrow ends, low on the body
+    ch_len = 2 * (WALL + SERVO_EAR_EXTENT + 4)
+    for sx in (-1, 1):
+        ch = box((ch_len, 10.0, 24.0))  # >=5/16in (7.94mm); roomy enough for the connector
+        ch.apply_translation([sx * SERVO_W / 2, 0, -13])
+        parts.append(ch)
+    # IMPORTANT: union the negatives into one clean manifold. Concatenating them
+    # leaves overlapping internal faces that make the later CSG subtraction leave
+    # an internal ledge at ear height (servo only seats halfway). Union fixes it.
+    pocket = parts[0]
+    for p in parts[1:]:
+        pocket = pocket.union(p)
+    return pocket
 
 
 def bldc_mount_negatives():
