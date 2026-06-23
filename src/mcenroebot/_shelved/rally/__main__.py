@@ -1,4 +1,4 @@
-"""Entry point for ``python -m mcenroebot.coordinator``."""
+"""Entry point for ``python -m mcenroebot._shelved.rally``."""
 
 from __future__ import annotations
 
@@ -12,13 +12,13 @@ def _demo() -> None:
     observations through the full pipeline, and prints a summary of servo
     writes and swing fires.
     """
+    from mcenroebot._shelved.ball import BallObservation
+    from mcenroebot._shelved.predictor import TrajectoryPredictor
+    from mcenroebot._shelved.rally.rally import RallyCoordinator
+    from mcenroebot._shelved.swing import SwingController, SwingProfile
     from mcenroebot.aim import AimController
-    from mcenroebot.ball import BallObservation
     from mcenroebot.clock import FakeClock
-    from mcenroebot.coordinator.rally import RallyCoordinator
     from mcenroebot.drivers import MockBLDCDriver, MockServoDriver
-    from mcenroebot.predictor import TrajectoryPredictor
-    from mcenroebot.swing import SwingController, SwingProfile
 
     # Build components.
     clock = FakeClock(start=0.0)

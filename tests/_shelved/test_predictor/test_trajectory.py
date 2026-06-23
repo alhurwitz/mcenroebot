@@ -9,8 +9,8 @@ import numpy.testing as npt
 import pytest
 
 from mcenroebot.aim import Position3D
-from mcenroebot.ball import BallObservation, BallState, StrikePrediction
-from mcenroebot.predictor import TrajectoryPredictor
+from mcenroebot._shelved.ball import BallObservation, BallState, StrikePrediction
+from mcenroebot._shelved.predictor import TrajectoryPredictor
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -574,14 +574,14 @@ class TestNoMutationOfPastObservations:
 
 class TestDemo:
     def test_demo_runs_without_error(self, capsys: pytest.CaptureFixture[str]) -> None:
-        from mcenroebot.predictor import _demo
+        from mcenroebot._shelved.predictor import _demo
 
         _demo()
         captured = capsys.readouterr()
         assert "TrajectoryPredictor demo" in captured.out
 
     def test_demo_prints_predict_strike_lines(self, capsys: pytest.CaptureFixture[str]) -> None:
-        from mcenroebot.predictor import _demo
+        from mcenroebot._shelved.predictor import _demo
 
         _demo()
         captured = capsys.readouterr()

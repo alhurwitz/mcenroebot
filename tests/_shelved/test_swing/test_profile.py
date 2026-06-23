@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from mcenroebot.swing.profile import SwingProfile
+from mcenroebot._shelved.swing.profile import SwingProfile
 
 
 class TestSwingProfileConstruction:

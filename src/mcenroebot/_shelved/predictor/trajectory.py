@@ -7,8 +7,8 @@ from collections import deque
 
 import numpy as np
 
+from mcenroebot._shelved.ball import BallObservation, BallState, StrikePrediction
 from mcenroebot.aim import Position3D
-from mcenroebot.ball import BallObservation, BallState, StrikePrediction
 
 __all__ = ["TrajectoryPredictor"]
 
@@ -272,11 +272,11 @@ class TrajectoryPredictor:
 def _demo() -> None:
     """Print sanity-check results for a simple synthetic trajectory.
 
-    Run with ``python -m mcenroebot.predictor``.
+    Run with ``python -m mcenroebot._shelved.predictor``.
     """
     import textwrap
 
-    from mcenroebot.ball import BallObservation
+    from mcenroebot._shelved.ball import BallObservation
 
     predictor = TrajectoryPredictor(buffer_size=16)
 

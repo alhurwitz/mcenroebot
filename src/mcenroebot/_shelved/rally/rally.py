@@ -5,12 +5,12 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 
+from mcenroebot._shelved.ball import BallObservation
+from mcenroebot._shelved.predictor import TrajectoryPredictor
+from mcenroebot._shelved.swing import SwingController, SwingProfile
 from mcenroebot.aim import AimController
-from mcenroebot.ball import BallObservation
 from mcenroebot.clock import Clock
 from mcenroebot.drivers import ServoDriver
-from mcenroebot.predictor import TrajectoryPredictor
-from mcenroebot.swing import SwingController, SwingProfile
 
 __all__ = ["RallyCoordinator"]
 

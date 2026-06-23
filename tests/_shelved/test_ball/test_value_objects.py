@@ -1,4 +1,4 @@
-"""Tests for frozen pydantic value objects in mcenroebot.ball.value_objects."""
+"""Tests for frozen pydantic value objects in mcenroebot._shelved.ball.value_objects."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from mcenroebot.aim import Position3D
-from mcenroebot.ball import BallObservation, BallState, PixelObservation, StrikePrediction
+from mcenroebot._shelved.ball import BallObservation, BallState, PixelObservation, StrikePrediction
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +201,7 @@ class TestPosition3DReuse:
     def test_position3d_is_not_redefined_in_ball_package(self) -> None:
         # Import Position3D from both packages and confirm they are the same class.
         from mcenroebot.aim import Position3D as AimPosition3D
-        from mcenroebot.ball.value_objects import BallState as _BallState
+        from mcenroebot._shelved.ball.value_objects import BallState as _BallState
 
         # The annotation on BallState.position is the aim Position3D.
         pos = AimPosition3D(x=1.0, y=0.0, z=0.0)

@@ -11,7 +11,7 @@ Layout
     depth.py          — DepthEstimator Protocol + BallRadiusDepthEstimator
                         implementation + StereoDepthEstimator and
                         RealSenseDepthEstimator stubs.
-    __main__.py       — entry point for ``python -m mcenroebot.ball``.
+    __main__.py       — entry point for ``python -m mcenroebot._shelved.ball``.
 
 Value objects
 -------------
@@ -44,14 +44,14 @@ Coordinate system
 
 from __future__ import annotations
 
-from mcenroebot.ball.depth import (
+from mcenroebot._shelved.ball.depth import (
     BallRadiusDepthEstimator,
     DepthEstimator,
     RealSenseDepthEstimator,
     StereoDepthEstimator,
     _demo,
 )
-from mcenroebot.ball.value_objects import (
+from mcenroebot._shelved.ball.value_objects import (
     BallObservation,
     BallState,
     PixelObservation,

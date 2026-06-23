@@ -6,8 +6,8 @@ import pytest
 
 from mcenroebot.clock import FakeClock
 from mcenroebot.drivers import MockBLDCDriver
-from mcenroebot.swing.controller import SwingController, _TICK_MS
-from mcenroebot.swing.profile import SwingProfile
+from mcenroebot._shelved.swing.controller import SwingController, _TICK_MS
+from mcenroebot._shelved.swing.profile import SwingProfile
 
 # ---------------------------------------------------------------------------
 # Helpers

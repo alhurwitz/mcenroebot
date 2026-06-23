@@ -9,7 +9,7 @@ Layout
 ------
     profile.py    — ``SwingProfile`` frozen pydantic model (ramp-up / hold / ramp-down).
     controller.py — ``SwingController`` async context manager.
-    __main__.py   — entry point for ``python -m mcenroebot.swing``.
+    __main__.py   — entry point for ``python -m mcenroebot._shelved.swing``.
 
 Throttle convention
 -------------------
@@ -31,8 +31,8 @@ to monkeypatch it in tests.
 
 from __future__ import annotations
 
-from mcenroebot.swing.controller import SwingController, _demo
-from mcenroebot.swing.profile import SwingProfile
+from mcenroebot._shelved.swing.controller import SwingController, _demo
+from mcenroebot._shelved.swing.profile import SwingProfile
 
 __all__ = [
     "SwingController",

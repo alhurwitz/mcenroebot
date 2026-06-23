@@ -8,7 +8,7 @@ plane (``x = strike_plane_x``).
 Layout
 ------
     trajectory.py  -- ``TrajectoryPredictor`` class.
-    __main__.py    -- entry point for ``python -m mcenroebot.predictor``.
+    __main__.py    -- entry point for ``python -m mcenroebot._shelved.predictor``.
 
 Physical model
 --------------
@@ -48,6 +48,6 @@ Confidence model
 
 from __future__ import annotations
 
-from mcenroebot.predictor.trajectory import TrajectoryPredictor, _demo
+from mcenroebot._shelved.predictor.trajectory import TrajectoryPredictor, _demo
 
 __all__ = ["TrajectoryPredictor", "_demo"]

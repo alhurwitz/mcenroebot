@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 from types import TracebackType
 
+from mcenroebot._shelved.swing.profile import SwingProfile
 from mcenroebot.clock import Clock, SystemClock
 from mcenroebot.drivers import BLDCDriver, MockBLDCDriver
-from mcenroebot.swing.profile import SwingProfile
 
 __all__ = ["SwingController", "_demo"]
 
@@ -114,7 +114,7 @@ class SwingController:
 def _demo() -> None:
     """Fire two sample swing profiles against a MockBLDCDriver and print results.
 
-    Run with ``python -m mcenroebot.swing``.
+    Run with ``python -m mcenroebot._shelved.swing``.
     """
     clock = SystemClock()
     driver = MockBLDCDriver()

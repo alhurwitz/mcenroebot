@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from mcenroebot.ball.value_objects import BallObservation, PixelObservation
+from mcenroebot._shelved.ball.value_objects import BallObservation, PixelObservation
 from mcenroebot.camera import CameraIntrinsics
 
 __all__ = [
@@ -169,11 +169,11 @@ class RealSenseDepthEstimator:
 def _demo() -> None:
     """Print a sanity-check depth estimate for a ball on the optical axis.
 
-    Run with ``python -m mcenroebot.ball``.
+    Run with ``python -m mcenroebot._shelved.ball``.
     """
     import math
 
-    from mcenroebot.ball.value_objects import PixelObservation
+    from mcenroebot._shelved.ball.value_objects import PixelObservation
     from mcenroebot.camera import CameraIntrinsics
 
     cam = CameraIntrinsics(

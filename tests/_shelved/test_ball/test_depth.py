@@ -1,4 +1,4 @@
-"""Tests for depth estimators in mcenroebot.ball.depth."""
+"""Tests for depth estimators in mcenroebot._shelved.ball.depth."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from mcenroebot.ball import (
+from mcenroebot._shelved.ball import (
     BallRadiusDepthEstimator,
     DepthEstimator,
     RealSenseDepthEstimator,
     StereoDepthEstimator,
 )
-from mcenroebot.ball.value_objects import BallObservation, PixelObservation
+from mcenroebot._shelved.ball.value_objects import BallObservation, PixelObservation
 from mcenroebot.camera import CameraIntrinsics
 
 
@@ -237,7 +237,7 @@ class TestNegativeRadiusBlockedAtObservation:
 
 class TestDemo:
     def test_demo_runs_without_error(self, capsys: pytest.CaptureFixture[str]) -> None:
-        from mcenroebot.ball import _demo
+        from mcenroebot._shelved.ball import _demo
 
         _demo()
         captured = capsys.readouterr()

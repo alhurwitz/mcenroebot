@@ -30,12 +30,12 @@ from collections.abc import AsyncGenerator
 import pytest
 
 from mcenroebot.aim import AimController
-from mcenroebot.ball import BallObservation
+from mcenroebot._shelved.ball import BallObservation
 from mcenroebot.clock import FakeClock
-from mcenroebot.coordinator.rally import RallyCoordinator
+from mcenroebot._shelved.rally.rally import RallyCoordinator
 from mcenroebot.drivers import MockBLDCDriver, MockServoDriver
-from mcenroebot.predictor import TrajectoryPredictor
-from mcenroebot.swing import SwingController, SwingProfile
+from mcenroebot._shelved.predictor import TrajectoryPredictor
+from mcenroebot._shelved.swing import SwingController, SwingProfile
 
 # ---------------------------------------------------------------------------
 # Constants / defaults shared across tests
@@ -557,7 +557,7 @@ class TestBLDCEndsAtZero:
 class TestDemoSmoke:
     def test_demo_runs_without_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         """_demo() must run without raising and print something to stdout."""
-        from mcenroebot.coordinator.__main__ import _demo
+        from mcenroebot._shelved.rally.__main__ import _demo
 
         _demo()
         captured = capsys.readouterr()
