@@ -2,7 +2,7 @@
 # Run: uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
 # Update hooks: uv run pre-commit autoupdate
 default_language_version:
-  python: python3.13
+  python: python3.11
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

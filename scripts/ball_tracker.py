@@ -77,4 +77,5 @@ try:
 
 except KeyboardInterrupt:
     print("Stopping...")
+finally:
     cap.release()

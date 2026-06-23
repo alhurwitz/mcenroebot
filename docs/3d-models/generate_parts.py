@@ -41,6 +41,10 @@ BLDC_BODY_LEN = 30.0  # length of motor body
 BLDC_SHAFT_D = 3.17  # 1/8" shaft (3.17mm)
 BLDC_MOUNT_BOLT_CIRCLE = 19.0  # bolt circle diameter for the X-pattern mount
 BLDC_MOUNT_SCREW_D = 3.4  # M3 clearance
+# X-mount cross OUTER (tip) holes — what bolts the motor's mount cross to the
+# bracket face. Measured tip-to-tip across the cross on the DYS D2826: 1.5 in = 38.1 mm.
+BLDC_XMOUNT_BOLT_CIRCLE = 38.1
+BLDC_WIRE_HOLE_D = 12.0  # center pass-through for the motor leads (base mounts flat)
 
 # 608 skate bearings (yaw axis + swing axis side support)
 BEARING_OD = 22.0
@@ -277,24 +281,23 @@ def make_pitch_bracket():
     c.apply_translation([0, back_h / 2 + face_t / 2, back_t / 2])
     body = body.difference(c)
 
-    # Bearing pocket on the face — the bearing's outer race press-fits here.
-    # Pocket axis is along +Y (perpendicular to face).
-    bp_outer = cylinder(radius=BEARING_OD / 2 + 0.2, height=BEARING_THICK + 0.4, sections=64)
-    RX(bp_outer, 90)
-    bp_outer.apply_translation([0, face_t / 2 - BEARING_THICK / 2 - 0.2, face_h / 2])
-    body = body.difference(bp_outer)
+    # NOTE (2026-06-14 fix): the old code bored a 22.4mm bearing pocket 7.4mm deep
+    # into a 6mm wall — it cut clean through and swallowed the 4 motor mount holes,
+    # so printed brackets had NO way to bolt the motor on. We have no 608 bearing
+    # anyway, so the motor mounts cantilevered: its X-mount cross bolts FLAT to this
+    # face, shaft + bell point out the front, only the leads pass through the center.
 
-    # Through-hole for shaft + BLDC body clearance (the BLDC body sits behind the face)
-    through = cylinder(radius=BLDC_SHAFT_D / 2 + 1.0, height=face_t * 4, sections=48)
-    RX(through, 90)
-    through.apply_translation([0, 0, face_h / 2])
-    body = body.difference(through)
+    # Center pass-through for the motor leads (no bearing, no bell clearance needed)
+    wire = cylinder(radius=BLDC_WIRE_HOLE_D / 2, height=face_t * 4, sections=48)
+    RX(wire, 90)
+    wire.apply_translation([0, 0, face_h / 2])
+    body = body.difference(wire)
 
-    # BLDC mount screw circle (4 screws on the back side of the face, into the motor)
-    # These screws come through the face from the -Y side into motor face.
-    r = BLDC_MOUNT_BOLT_CIRCLE / 2
+    # Motor X-mount screw circle — 4 holes matching the cross's OUTER (tip) holes.
+    # M3 clearance; fasten with M3 screws + nuts on the back of the face.
+    r = BLDC_XMOUNT_BOLT_CIRCLE / 2
     for ang in (45, 135, 225, 315):
-        h = cylinder(radius=BLDC_MOUNT_SCREW_D / 2, height=face_t * 3, sections=24)
+        h = cylinder(radius=M3_CLEAR / 2, height=face_t * 4, sections=24)
         RX(h, 90)
         h.apply_translation(
             [r * np.cos(np.radians(ang)), 0, face_h / 2 + r * np.sin(np.radians(ang))]

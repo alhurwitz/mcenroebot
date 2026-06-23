@@ -3,7 +3,7 @@ name = "mcenroebot"
 version = "0.1.0"
 description = "McEnroe ping pong robot — V2 control software (aim + swing)"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "adafruit-blinka>=9.1.0",
     "adafruit-circuitpython-pca9685>=3.4.22",
@@ -24,9 +24,11 @@ pi = [
 [dependency-groups]
 dev = [
     "ipython>=9.14.1",
+    "mypy==2.1.0",
     "pre-commit>=4.6.0",
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "ruff==0.15.14",
 ]
 pi = [
     "rpi-gpio>=0.7.1",
@@ -41,14 +43,14 @@ packages = ["src/mcenroebot"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py311"
 exclude = ["tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
 mypy_path = "src"
@@ -146,9 +148,9 @@ addopts = [
 ]
 filterwarnings = [
     "error", # treat warnings as errors; add ignores below as needed
-    # Python 3.13 GC-timing issue: asyncio.run() leaves self-pipe sockets that
-    # get collected asynchronously.  The warning is from Python's own asyncio
-    # internals, not user code, so it's safe to suppress here.
+    # asyncio.run() can leave self-pipe sockets that are garbage-collected
+    # asynchronously, surfacing a ResourceWarning from Python's own asyncio
+    # internals (not user code).  Observed on 3.13; harmless to keep on 3.11.
     "ignore::ResourceWarning",
 ]
 markers = [

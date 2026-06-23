@@ -22,7 +22,7 @@ uv run pytest tests/test_aim.py::TestAimControllerCompute::test_directly_forward
 uv run pytest -m unit                      # by marker (unit / integration / perf / adapter)
 
 uv run mypy src/                           # strict mode, with pydantic.mypy plugin
-uv run ruff check src/                     # lint (line-length 100, target py313)
+uv run ruff check src/                     # lint (line-length 100, target py311)
 uv run ruff format src/
 
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg   # one-time hook install
@@ -83,4 +83,4 @@ Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by com
 
 ## Python version note
 
-`pyproject.toml` requires Python ≥3.13 (mypy and ruff both target py313). Pre-commit hooks also run under 3.13. `.python-version` still pins 3.10 — treat that as stale; use the system 3.13 via `uv` instead. Pi deployment target (Bookworm 3.11) is not yet aligned with the project's 3.13 floor and will need to be reconciled before hardware rollout.
+`pyproject.toml` requires Python ≥3.11 (mypy and ruff both target py311), matching the Raspberry Pi deployment target (Bookworm, Python 3.11). `.python-version` pins 3.11 and pre-commit hooks run under 3.11; provision the interpreter with `uv python install 3.11` if it isn't already present. The floor was previously 3.13 and was lowered to 3.11 so the dev environment matches the Pi.

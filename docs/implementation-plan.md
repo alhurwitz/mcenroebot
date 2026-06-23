@@ -11,7 +11,7 @@ Actionable, wave-by-wave execution plan derived from [`V2_PLAN.md`](V2_PLAN.md).
 | Working directory | `/Users/alberthurwitz/Projects/mcenroebot` |
 | Package | `src/mcenroebot/` (src-layout) |
 | Tests | `tests/` |
-| Python | ≥3.13 (per `pyproject.toml`; Pi/Bookworm 3.11 target not yet reconciled) |
+| Python | ≥3.11 (per `pyproject.toml`; matches the Pi/Bookworm 3.11 deploy target) |
 | Dep manager | `uv` (never hand-edit `pyproject.toml` deps) |
 | Coverage floor | 85% (aim ≥95% on pure-math modules) |
 | Current branch | `feature/v2-control` |
