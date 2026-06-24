@@ -294,6 +294,25 @@ Merge `feature/v4-feeder` → `develop` after Wave 5's phase gate (vision is a c
 
 Waves 2–6 are left for follow-up sessions.
 
+### Status (updated 2026-06-24) — all waves code-complete
+
+Every wave is implemented and committed on `feature/v4-feeder` via TDD:
+
+| Wave | Module(s) | State |
+| --- | --- | --- |
+| 0 | archive V3 → `_shelved/` | done |
+| 1 | `launch/` | done — 100% coverage |
+| 2 | `drivers/feeder/`, `drivers/lift/` | done — mock-tested, real `@integration` |
+| 3 | `drill/` | done — 100% coverage |
+| 4 | `coordinator/feeder.py` | done — 100% coverage, 100-shot sim passes |
+| 5 | `scripts/calibrate_feeder.py`, `calibrate_launch.py` | code-complete; **live-feed gate needs Pi hardware** |
+| 6 | `player/`, `drill.VisionPlacementStrategy` | done — 100% coverage; **live gate needs Pi hardware** |
+
+Full suite: **473 passed, 8 skipped** (Pi-only `@integration`), **mypy clean**, **ruff clean**,
+project coverage **96.48%** (`launch/` 100%). Remaining work is hardware-only: run the Wave 5
+calibration + first-live-feed gate and the Wave 6 ≥80%-to-open-side gate on the Pi, then merge
+`feature/v4-feeder` → `develop`.
+
 ---
 
 ## 9. Open questions / risks (carried forward)
