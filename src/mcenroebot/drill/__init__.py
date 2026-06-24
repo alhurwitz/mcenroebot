@@ -20,6 +20,7 @@ Layout
 from mcenroebot.drill.engine import Drill, _demo
 from mcenroebot.drill.strategy import AimStrategy, FixedPatternStrategy, Pattern
 from mcenroebot.drill.value_objects import DrillContext, Shot, TableTarget
+from mcenroebot.drill.vision import VisionPlacementStrategy
 
 __all__ = [
     "AimStrategy",
@@ -29,5 +30,6 @@ __all__ = [
     "Pattern",
     "Shot",
     "TableTarget",
+    "VisionPlacementStrategy",
     "_demo",
 ]

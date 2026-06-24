@@ -67,6 +67,7 @@ module = [
     "fastembed",
     "numpy",
     "numpy.testing",
+    "numpy.typing",
     "cv2",
     "anthropic", "anthropic.*",
     "openai", "openai.*",
