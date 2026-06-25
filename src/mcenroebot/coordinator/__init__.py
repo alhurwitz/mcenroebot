@@ -8,6 +8,6 @@ drill -> launch + aim + feeder + lift pipeline (see
 
 from __future__ import annotations
 
-from mcenroebot.coordinator.feeder import FeederCoordinator
+from mcenroebot.coordinator.feeder import FeederCoordinator, _demo
 
-__all__ = ["FeederCoordinator"]
+__all__ = ["FeederCoordinator", "_demo"]

@@ -25,7 +25,7 @@ from mcenroebot.drivers import (
 )
 from mcenroebot.launch import LaunchController, ThrottleMap
 
-__all__ = ["FeederCoordinator"]
+__all__ = ["FeederCoordinator", "_demo"]
 
 _log = logging.getLogger(__name__)
 
@@ -163,3 +163,71 @@ class FeederCoordinator:
         self._wheel_bottom.disarm()
         self._feeder.stop()
         self._lift.off()
+
+
+async def _demo() -> None:
+    """Run a short mock-driven feeder drill end-to-end and print the result.
+
+    Wires the whole feeder pipeline (drill -> launch + aim + servos + wheels +
+    feeder + lift) against mock drivers and a FakeClock, so it runs anywhere —
+    no Pi, no real time. Run with `python -m mcenroebot.coordinator`.
+    """
+    from mcenroebot.aim import AimController, TurretGeometry
+    from mcenroebot.clock import FakeClock
+    from mcenroebot.drill import Drill, FixedPatternStrategy, TableTarget
+    from mcenroebot.drivers import (
+        MockBLDCDriver,
+        MockFeederDriver,
+        MockLiftDriver,
+        MockServoDriver,
+    )
+    from mcenroebot.launch import LaunchGeometry, ShotSpec, ThrottleMap
+
+    target = TableTarget(center_x_m=2.0, half_width_m=0.6)
+    drill = Drill(
+        spec=ShotSpec(speed_mps=7.0, spin_rad_s=40.0, spin_axis_deg=15.0),
+        strategy=FixedPatternStrategy(pattern="oscillate", target=target),
+        cadence_s=1.2,
+    )
+    servo = MockServoDriver()
+    head_roll = MockServoDriver()
+    wheel_top = MockBLDCDriver()
+    wheel_bottom = MockBLDCDriver()
+    feeder = MockFeederDriver()
+    lift = MockLiftDriver()
+    coordinator = FeederCoordinator(
+        drill=drill,
+        launch=LaunchController(
+            geometry=LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0)
+        ),
+        throttle_map=ThrottleMap(rpm_at_full_throttle=10000.0),
+        aim=AimController(TurretGeometry(arm_length_m=5.0)),
+        servo=servo,
+        head_roll=head_roll,
+        wheel_top=wheel_top,
+        wheel_bottom=wheel_bottom,
+        feeder=feeder,
+        lift=lift,
+        clock=FakeClock(),
+    )
+
+    n = 4
+    print(f"=== feeder drill demo ({n} shots, mock drivers + FakeClock) ===")
+    await coordinator.run(n)
+
+    pans = [a for c, a in servo.history if c == 0]
+    tilts = [a for c, a in servo.history if c == 1]
+    rolls = [a for _, a in head_roll.history]
+    feeds = [bpm for name, bpm in feeder.calls if name == "set_rate"]
+    for i in range(n):
+        top_t = wheel_top.throttle_history[i]
+        bottom_t = wheel_bottom.throttle_history[i]
+        print(
+            f"  shot {i}: pan={pans[i]:6.1f}°  tilt={tilts[i]:6.1f}°  roll={rolls[i]:5.1f}°  "
+            f"top={top_t:.3f}  bottom={bottom_t:.3f}  feed={feeds[i]:.0f} bpm"
+        )
+    print(
+        f"  shutdown: wheels at {wheel_top.throttle_history[-1]:.1f} "
+        f"(armed={wheel_top.armed}), feeder {feeder.calls[-1][0]}, "
+        f"lift {lift.duty_history[-1]:.1f}"
+    )
