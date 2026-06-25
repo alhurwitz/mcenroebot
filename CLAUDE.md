@@ -4,9 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-McEnroe is a hobby ping-pong robot. V2 is the **aim-and-swat** phase: a 3-axis turret with two MG996R servos (J1 yaw, J2 pitch) for aiming, and an A2212 1000 KV brushless motor driven by an ESC (J3) for an **open-loop** paddle swing. Deploy target is a Raspberry Pi 4 with an Adafruit PCA9685 PWM HAT at I2C `0x40` (pan=ch0, tilt=ch1, BLDC ESC=ch2). Single Logitech webcam at `/dev/video0` — depth is recovered monocularly from apparent ball radius.
+McEnroe is a hobby ping-pong robot. **The current direction is V4 — the feeder**: a spin/aim ball machine that serves balls with controlled speed/spin to chosen court locations, with a closed recycle loop (catch net → trough → auger → hopper → escapement → two launch wheels). There is **no incoming-ball tracking, no strike-plane prediction, no real-time loop** — it is a periodic scheduler driving actuators. The earlier **V2 aim-and-swat** return-rally stack (`ball/`, `predictor/`, `swing/`, `RallyCoordinator`) is shelved under `src/mcenroebot/_shelved/` and is not imported by the feeder.
 
-**`docs/V2_PLAN.md` is the source of truth** for module specs, wave structure, and hardware mapping. Read it before adding new modules; the existing source only covers the `aim.py` slice. [`docs/implementation-plan.md`](docs/implementation-plan.md) is the actionable build checklist derived from it.
+**Sources of truth:** [`docs/superpowers/specs/2026-06-23-feeder-design.md`](docs/superpowers/specs/2026-06-23-feeder-design.md) (reconciled feeder design + wave plan), derived from [`docs/V4_PLAN.md`](docs/V4_PLAN.md) (mechanism/BOM) and [`docs/v4-implementation-plan.md`](docs/v4-implementation-plan.md). Read the spec before adding feeder modules. (`docs/V2_PLAN.md` documents the shelved V2 phase.)
+
+**Hardware.** Deploy target is a Raspberry Pi 4 with an Adafruit PCA9685 PWM HAT at I2C `0x40`. Planned V4 channel map (confirm channel assignment + shared-ground/power budget before wiring — see spec §9):
+
+| Ch | Actuator | Driver |
+|---|---|---|
+| 0 | pan servo (yaw) | `drivers/servo` |
+| 1 | tilt servo (pitch) | `drivers/servo` |
+| 2 | head-roll servo | `drivers/servo` |
+| 3 | top wheel ESC | `drivers/bldc` |
+| 4 | bottom wheel ESC | `drivers/bldc` |
+| 5 | escapement CR servo | `drivers/feeder` |
+| 6 | auger MOSFET PWM | `drivers/lift` |
+
+The hopper-full endstop (optional) is on a GPIO pin via `drivers/lift.GpioHopperSensor`, not the PCA9685. Single Logitech webcam at `/dev/video0` is used only for the optional Wave-6 player-placement vision (no 3D ball tracking).
 
 ## Common commands
 
@@ -79,7 +93,7 @@ Controllers (e.g. `AimController`) are **stateless apart from injected configura
 
 ### Gitflow
 
-Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by commitizen (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `chore:`, `docs:`). Current state: `feature/aim` carries the aim module + pydantic v2 refactor (already committed); the plan is to merge it to `develop` once Wave 1 modules land, then cut `feature/v2-control` from `develop` for Waves 2–3 as described in [`docs/implementation-plan.md`](docs/implementation-plan.md).
+Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by commitizen (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `chore:`, `docs:`). Current state: `feature/v4-feeder` (cut from `develop`) carries the V4 feeder build — all software waves (`launch/`, `drivers/feeder` + `drivers/lift`, `drill/`, `coordinator/feeder.py`, the `scripts/calibrate_*` bring-up scripts, and `player/` + `VisionPlacementStrategy`) are committed. The plan is to merge `feature/v4-feeder` → `develop` after the Wave 5 hardware phase gate passes (live feed on the Pi); see [`docs/v4-bringup-checklist.md`](docs/v4-bringup-checklist.md) for the remaining hardware steps.
 
 ## Python version note
 

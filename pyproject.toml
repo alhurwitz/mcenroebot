@@ -67,6 +67,7 @@ module = [
     "fastembed",
     "numpy",
     "numpy.testing",
+    "numpy.typing",
     "cv2",
     "anthropic", "anthropic.*",
     "openai", "openai.*",
@@ -100,6 +101,7 @@ module = [
     "adafruit_pca9685",
     "board",
     "busio",
+    "RPi", "RPi.*",
 ]
 ignore_missing_imports = true
 

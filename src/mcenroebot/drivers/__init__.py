@@ -9,6 +9,9 @@ Sub-packages
 ------------
     servo/  — ServoDriver, PCA9685ServoDriver, MockServoDriver.
     bldc/   — BLDCDriver, PCA9685BLDCDriver, MockBLDCDriver.
+    feeder/ — FeederDriver, Pca9685FeederDriver, MockFeederDriver (V4 escapement).
+    lift/   — LiftDriver, HopperSensor, Pca9685LiftDriver, GpioHopperSensor,
+              MockLiftDriver, MockHopperSensor (V4 auger).
 
 Pi-only Adafruit libraries are imported lazily inside each real driver's
 ``__init__`` method so that importing this package on a Mac never raises
@@ -18,13 +21,31 @@ Pi-only Adafruit libraries are imported lazily inside each real driver's
 from __future__ import annotations
 
 from mcenroebot.drivers.bldc import BLDCDriver, MockBLDCDriver, PCA9685BLDCDriver
+from mcenroebot.drivers.feeder import FeederDriver, MockFeederDriver, Pca9685FeederDriver
+from mcenroebot.drivers.lift import (
+    GpioHopperSensor,
+    HopperSensor,
+    LiftDriver,
+    MockHopperSensor,
+    MockLiftDriver,
+    Pca9685LiftDriver,
+)
 from mcenroebot.drivers.servo import MockServoDriver, PCA9685ServoDriver, ServoDriver
 
 __all__ = [
     "BLDCDriver",
+    "FeederDriver",
+    "GpioHopperSensor",
+    "HopperSensor",
+    "LiftDriver",
     "MockBLDCDriver",
+    "MockFeederDriver",
+    "MockHopperSensor",
+    "MockLiftDriver",
     "MockServoDriver",
     "PCA9685BLDCDriver",
     "PCA9685ServoDriver",
+    "Pca9685FeederDriver",
+    "Pca9685LiftDriver",
     "ServoDriver",
 ]
