@@ -93,7 +93,7 @@ Controllers (e.g. `AimController`) are **stateless apart from injected configura
 
 ### Gitflow
 
-Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by commitizen (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `chore:`, `docs:`). Current state: `feature/aim` carries the aim module + pydantic v2 refactor (already committed); the plan is to merge it to `develop` once Wave 1 modules land, then cut `feature/v2-control` from `develop` for Waves 2–3 as described in [`docs/implementation-plan.md`](docs/implementation-plan.md).
+Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by commitizen (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `test(scope):`, `chore:`, `docs:`). Current state: `feature/v4-feeder` (cut from `develop`) carries the V4 feeder build — all software waves (`launch/`, `drivers/feeder` + `drivers/lift`, `drill/`, `coordinator/feeder.py`, the `scripts/calibrate_*` bring-up scripts, and `player/` + `VisionPlacementStrategy`) are committed. The plan is to merge `feature/v4-feeder` → `develop` after the Wave 5 hardware phase gate passes (live feed on the Pi); see [`docs/v4-bringup-checklist.md`](docs/v4-bringup-checklist.md) for the remaining hardware steps.
 
 ## Python version note
 
