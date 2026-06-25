@@ -19,6 +19,7 @@ pi = [
     "adafruit-blinka>=9.1.0",
     "adafruit-circuitpython-pca9685>=3.4.22",
     "adafruit-circuitpython-servokit>=1.3.24",
+    "rpi-lgpio>=0.6",
 ]
 
 [dependency-groups]
@@ -30,9 +31,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff==0.15.14",
 ]
-pi = [
-    "rpi-gpio>=0.7.1",
-]
+pi = []
 
 [build-system]
 requires = ["hatchling"]
