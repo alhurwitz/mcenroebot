@@ -120,11 +120,25 @@ class LaunchGeometry(BaseModel):
 
 
 class ThrottleMap(BaseModel):
-    """Calibrated rpm <-> ESC throttle [0, 1] mapping (linear v1 model)."""
+    """Calibrated rpm <-> ESC throttle [0, 1] mapping (linear v1 model).
+
+    Attributes
+    ----------
+    rpm_at_full_throttle : float
+        Measured wheel rpm at throttle 1.0. Must be > 0.
+    throttle_floor : float
+        ESC startup deadband: the lowest throttle at which the motor actually
+        spins, in [0, 1). Any commanded rpm > 0 is remapped into
+        ``[throttle_floor, 1]`` so low-speed shots clear the deadband instead
+        of commanding a throttle the ESC ignores. ``rpm == 0`` still maps to 0
+        (wheel off). Measured via scripts/esc_calibrate.py + esc_bringup.py;
+        update with the *loaded* value once calibrate_launch.py runs.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     rpm_at_full_throttle: float
+    throttle_floor: float = 0.0
 
     @field_validator("rpm_at_full_throttle")
     @classmethod
@@ -133,7 +147,21 @@ class ThrottleMap(BaseModel):
             raise ValueError(f"rpm_at_full_throttle={value} must be > 0")
         return value
 
+    @field_validator("throttle_floor")
+    @classmethod
+    def _check_floor(cls, value: float) -> float:
+        if not (0.0 <= value < 1.0):
+            raise ValueError(f"throttle_floor={value} must be in [0, 1)")
+        return value
+
     def throttle_for(self, rpm: float) -> float:
-        """Convert a wheel rpm to an ESC throttle in [0, 1] (clamped)."""
-        throttle = rpm / self.rpm_at_full_throttle
+        """Convert a wheel rpm to an ESC throttle in [0, 1] (clamped).
+
+        ``rpm <= 0`` returns 0.0 (wheel off). Any positive rpm is mapped into
+        ``[throttle_floor, 1]`` so it clears the ESC startup deadband.
+        """
+        if rpm <= 0.0:
+            return 0.0
+        frac = rpm / self.rpm_at_full_throttle
+        throttle = self.throttle_floor + frac * (1.0 - self.throttle_floor)
         return min(1.0, max(0.0, throttle))
