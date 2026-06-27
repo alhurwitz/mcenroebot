@@ -9,7 +9,7 @@ from typing import NamedTuple
 
 import pytest
 
-from mcenroebot.aim import AimController, TurretGeometry
+from mcenroebot.aim import AimController, AimGeometry
 from mcenroebot.clock import FakeClock
 from mcenroebot.coordinator import FeederCoordinator
 from mcenroebot.drill import Drill, FixedPatternStrategy, TableTarget
@@ -39,7 +39,8 @@ class Harness(NamedTuple):
 def _make(
     *,
     spec: ShotSpec | None = None,
-    aim_reach_m: float = 5.0,
+    yaw_neutral_deg: float = 90.0,
+    static_y_m: float = 0.0,
     cadence_s: float = 1.0,
     settle_s: float = 0.3,
     feed_rate_bpm: float = 30.0,
@@ -51,14 +52,18 @@ def _make(
     pattern: str = "static",
 ) -> Harness:
     target = TableTarget(center_x_m=1.5, half_width_m=0.5)
-    strategy = FixedPatternStrategy(pattern=pattern, target=target)  # type: ignore[arg-type]
+    strategy = FixedPatternStrategy(
+        pattern=pattern,  # type: ignore[arg-type]
+        target=target,
+        static_y_m=static_y_m,
+    )
     spec = spec or ShotSpec(speed_mps=6.0, spin_rad_s=0.0, spin_axis_deg=0.0)
     drill = Drill(spec=spec, strategy=strategy, cadence_s=cadence_s)
     launch = LaunchController(
-        geometry=LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0)
+        geometry=LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0, launch_height_m=0.3)
     )
     throttle_map = ThrottleMap(rpm_at_full_throttle=10000.0)
-    aim = AimController(TurretGeometry(arm_length_m=aim_reach_m))
+    aim = AimController(AimGeometry(yaw_neutral_deg=yaw_neutral_deg))
     servo = MockServoDriver()
     head_roll = MockServoDriver()
     wheel_top = MockBLDCDriver()
@@ -175,9 +180,18 @@ class TestSkips:
         assert h.wheel_top.throttle_history == [0.0, 0.0]
         assert h.feeder.calls == [("stop", None)]  # only shutdown stop()
 
-    async def test_unreachable_target_skipped(self) -> None:
-        # Tiny aim reach -> the 1.5 m target is unreachable -> aim.compute None.
-        h = _make(aim_reach_m=0.2)
+    async def test_out_of_pan_range_target_skipped(self) -> None:
+        # Neutral parked near the upper limit + a left-offset target pushes the
+        # required pan past 180° -> aim.pan_angle_for None -> skip every shot.
+        h = _make(yaw_neutral_deg=140.0, static_y_m=1.5)
+        await h.coord.run(3)
+        assert h.servo.history == []
+        assert h.feeder.calls == [("stop", None)]
+
+    async def test_out_of_ballistic_range_target_skipped(self) -> None:
+        # A ball too slow to reach the 1.5 m target -> launch.tilt_angle_for
+        # None -> skip every shot (pan is fine; the elevation has no solution).
+        h = _make(spec=ShotSpec(speed_mps=2.0, spin_rad_s=0.0, spin_axis_deg=0.0))
         await h.coord.run(3)
         assert h.servo.history == []
         assert h.feeder.calls == [("stop", None)]

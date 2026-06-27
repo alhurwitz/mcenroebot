@@ -64,10 +64,20 @@ class TestWheelCommand:
 
 class TestLaunchGeometry:
     def test_defaults(self) -> None:
-        geo = LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0)
+        geo = LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0, launch_height_m=0.3)
         assert geo.ball_radius_m == 0.02
         assert geo.grip_efficiency == 0.85
         assert geo.spin_efficiency == 0.85
+
+    def test_ballistic_defaults(self) -> None:
+        geo = LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0, launch_height_m=0.3)
+        assert geo.launch_height_m == pytest.approx(0.3)
+        assert geo.gravity_m_s2 == pytest.approx(9.81)
+        assert geo.pitch_neutral_deg == pytest.approx(90.0)
+
+    def test_zero_launch_height_is_allowed(self) -> None:
+        geo = LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0, launch_height_m=0.0)
+        assert geo.launch_height_m == 0.0
 
     @pytest.mark.parametrize(
         "field,value",
@@ -79,16 +89,25 @@ class TestLaunchGeometry:
             ("spin_efficiency", 0.0),
             ("spin_efficiency", 1.1),
             ("max_wheel_rpm", 0.0),
+            ("launch_height_m", -0.1),
+            ("gravity_m_s2", 0.0),
+            ("gravity_m_s2", -9.81),
+            ("pitch_neutral_deg", -0.1),
+            ("pitch_neutral_deg", 180.1),
         ],
     )
     def test_out_of_range_raises(self, field: str, value: float) -> None:
-        kwargs: dict[str, float] = {"wheel_diameter_m": 0.055, "max_wheel_rpm": 10000.0}
+        kwargs: dict[str, float] = {
+            "wheel_diameter_m": 0.055,
+            "max_wheel_rpm": 10000.0,
+            "launch_height_m": 0.3,
+        }
         kwargs[field] = value
         with pytest.raises(ValidationError, match=field):
             LaunchGeometry(**kwargs)
 
     def test_is_frozen(self) -> None:
-        geo = LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0)
+        geo = LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0, launch_height_m=0.3)
         with pytest.raises(ValidationError):
             geo.wheel_diameter_m = 0.06  # type: ignore[misc]
 

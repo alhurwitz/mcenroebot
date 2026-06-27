@@ -1,49 +1,45 @@
-"""Aim controller — compute J1 (yaw) and J2 (pitch) servo angles.
+"""Aim controller — compute the pan (yaw) servo angle for a target.
 
-This package solves the "aim" half of the V2 turret. Given a target point
-in the robot frame, it returns the pair of servo angles that point the
-paddle's sweep plane at the target. Swing timing — picking *when* during
-the BLDC's rotation the paddle is at the target — is a separate problem
-handled by the trajectory predictor and swing-fire logic.
+This package solves the *horizontal* half of feeder pointing. Given a target
+point in the robot frame, it returns the pan-servo angle that rotates the
+launch head to face the target's bearing. It carries no physics and no
+elevation: the vertical/ballistic half (the tilt servo) lives in the ``launch``
+package, which owns the exit speed needed to solve the projectile arc.
 
 Layout
 ------
-    value_objects.py  — Position3D, ServoAngles, TurretGeometry (frozen pydantic).
+    value_objects.py  — Position3D, AimGeometry (frozen pydantic).
     controller.py     — AimController + private `_demo` helper.
     __main__.py       — entry point for `python -m mcenroebot.aim`.
 
+The package also re-exports ``ServoAngles`` and ``AimController`` carries
+deprecated ``compute``/``is_reachable`` methods — a thin V2-turret shim kept
+only so the shelved rally stack (``mcenroebot._shelved``) keeps running. Feeder
+code must not use them.
+
 Coordinate system
 -----------------
-    Origin: J1 yaw axis, at the height of the J2 pitch pivot.
-    +X: forward (toward the ball).
+    Origin: pan (yaw) axis, at the tilt-pivot height.
+    +X: forward (toward the player).
     +Y: left (viewed from above).
     +Z: up.
     Units: meters.
 
 Servo convention
 ----------------
-    Both MG996R servos have a 180° range. The neutral pose is yaw=90°,
-    pitch=90° (paddle sweeps forward in the vertical X-Z plane). Yaw
-    decreases as the turret rotates right (toward -Y); pitch increases
-    as the sweep plane tilts up.
-
-Simplifications for V1
-----------------------
-    1. The J2 pivot and the BLDC shaft center are treated as coincident.
-       In reality they're offset by ~30mm (pitch bracket length). This
-       matters at extreme angles but not at typical strike-zone positions.
-    2. The controller doesn't pick a swing angle — that's the trajectory
-       predictor's job. This module only orients the sweep plane.
-    3. Flat returns only. No paddle face tilt for topspin/backspin.
+    The pan servo has a 180° range. Neutral (``yaw_neutral_deg``, default 90°)
+    aims straight forward (+X). The angle increases toward +Y (left) and
+    decreases toward -Y (right). Bearings that would need an angle outside
+    [0, 180] are unreachable and ``pan_angle_for`` returns None.
 """
 
 from mcenroebot.aim.controller import AimController, _demo
-from mcenroebot.aim.value_objects import Position3D, ServoAngles, TurretGeometry
+from mcenroebot.aim.value_objects import AimGeometry, Position3D, ServoAngles
 
 __all__ = [
     "AimController",
+    "AimGeometry",
     "Position3D",
     "ServoAngles",
-    "TurretGeometry",
     "_demo",
 ]

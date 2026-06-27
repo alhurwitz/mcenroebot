@@ -109,7 +109,7 @@ def _print_summary(channel: int, angle: float, min_us: int, max_us: int) -> None
     print(f"  channel        : {channel}")
     print(f"  last angle     : {angle:.1f} deg")
     print(f"  pulse range    : ({min_us}, {max_us})  # microseconds for set_pulse_width_range")
-    print("  paste into your servo config / TurretGeometry once you've confirmed")
+    print("  paste into your servo config / AimGeometry once you've confirmed")
     print("  the ends reach the mechanical limits without buzzing.\n")
 
 

@@ -6,7 +6,15 @@ import math
 
 import pytest
 
-from mcenroebot.launch import LaunchController, LaunchGeometry, ShotSpec, ThrottleMap, WheelCommand
+from mcenroebot.aim import Position3D
+from mcenroebot.launch import (
+    Arc,
+    LaunchController,
+    LaunchGeometry,
+    ShotSpec,
+    ThrottleMap,
+    WheelCommand,
+)
 
 
 def _rpm(u_surface: float, wheel_diameter_m: float) -> float:
@@ -21,6 +29,7 @@ def geometry() -> LaunchGeometry:
         grip_efficiency=0.85,
         spin_efficiency=0.85,
         max_wheel_rpm=10000.0,
+        launch_height_m=0.3,
     )
 
 
@@ -78,6 +87,7 @@ class TestCompute:
             grip_efficiency=geometry.grip_efficiency,
             spin_efficiency=geometry.spin_efficiency,
             max_wheel_rpm=100.0,
+            launch_height_m=geometry.launch_height_m,
         )
         controller = LaunchController(geometry=low_max)
         cmd = controller.compute(ShotSpec(speed_mps=20.0, spin_rad_s=0.0, spin_axis_deg=0.0))
@@ -99,6 +109,76 @@ class TestCompute:
         controller = LaunchController()
         cmd = controller.compute(ShotSpec(speed_mps=5.0, spin_rad_s=0.0, spin_axis_deg=0.0))
         assert cmd is not None
+
+
+class TestTiltAngleFor:
+    def test_known_low_arc_maps_to_servo_angle(self) -> None:
+        # Flat ground, theta_low = 30° -> tilt = pitch_neutral + 30 = 120.
+        v, g = 10.0, 9.81
+        d = v * v * math.sin(math.radians(60.0)) / g
+        geo = LaunchGeometry(
+            wheel_diameter_m=0.055,
+            max_wheel_rpm=10000.0,
+            launch_height_m=0.0,
+            gravity_m_s2=g,
+            pitch_neutral_deg=90.0,
+        )
+        ctrl = LaunchController(geometry=geo)
+        spec = ShotSpec(speed_mps=v, spin_rad_s=0.0, spin_axis_deg=0.0)
+        tilt = ctrl.tilt_angle_for(Position3D(x=d, y=0.0, z=0.0), spec)
+        assert tilt == pytest.approx(120.0, abs=1e-6)
+
+    def test_high_arc_is_steeper_than_low(self, controller: LaunchController) -> None:
+        spec = ShotSpec(speed_mps=11.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        target = Position3D(x=4.0, y=0.0, z=0.0)
+        low = controller.tilt_angle_for(target, spec, arc=Arc.LOW)
+        high = controller.tilt_angle_for(target, spec, arc=Arc.HIGH)
+        assert low is not None and high is not None
+        assert high > low
+
+    def test_low_arc_is_the_default(self, controller: LaunchController) -> None:
+        spec = ShotSpec(speed_mps=11.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        target = Position3D(x=4.0, y=0.0, z=0.0)
+        assert controller.tilt_angle_for(target, spec) == controller.tilt_angle_for(
+            target, spec, arc=Arc.LOW
+        )
+
+    def test_uses_horizontal_distance_so_y_is_symmetric(self, controller: LaunchController) -> None:
+        spec = ShotSpec(speed_mps=11.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        left = controller.tilt_angle_for(Position3D(x=2.0, y=0.6, z=0.0), spec)
+        right = controller.tilt_angle_for(Position3D(x=2.0, y=-0.6, z=0.0), spec)
+        assert left is not None and right is not None
+        assert left == pytest.approx(right)
+
+    def test_higher_target_needs_more_elevation(self, controller: LaunchController) -> None:
+        spec = ShotSpec(speed_mps=11.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        flat = controller.tilt_angle_for(Position3D(x=2.0, y=0.0, z=0.0), spec)
+        raised = controller.tilt_angle_for(Position3D(x=2.0, y=0.0, z=1.0), spec)
+        assert flat is not None and raised is not None
+        assert raised > flat
+
+    def test_out_of_ballistic_range_returns_none(self, controller: LaunchController) -> None:
+        # A slow ball cannot reach a far target -> no real elevation -> None.
+        spec = ShotSpec(speed_mps=3.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        assert controller.tilt_angle_for(Position3D(x=100.0, y=0.0, z=0.0), spec) is None
+
+    def test_zero_horizontal_distance_returns_none(self, controller: LaunchController) -> None:
+        # Target directly above/at the launch axis -> no bearing -> None.
+        spec = ShotSpec(speed_mps=6.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        assert controller.tilt_angle_for(Position3D(x=0.0, y=0.0, z=0.0), spec) is None
+
+    def test_servo_angle_out_of_range_returns_none(self) -> None:
+        # Neutral parked near the upper limit: a lofted high arc pushes the
+        # mapped tilt past 180° -> unmappable -> None.
+        geo = LaunchGeometry(
+            wheel_diameter_m=0.055,
+            max_wheel_rpm=10000.0,
+            launch_height_m=0.0,
+            pitch_neutral_deg=178.0,
+        )
+        ctrl = LaunchController(geometry=geo)
+        spec = ShotSpec(speed_mps=11.0, spin_rad_s=0.0, spin_axis_deg=0.0)
+        assert ctrl.tilt_angle_for(Position3D(x=4.0, y=0.0, z=0.0), spec, arc=Arc.HIGH) is None
 
 
 class TestThrottles:
