@@ -23,7 +23,7 @@ Mechanism/BOM: [`docs/V4_PLAN.md`](V4_PLAN.md).
 
 - [ ] `uv sync --extra pi` on the Pi (installs `adafruit-blinka`, `-pca9685`, `-servokit`, `RPi.GPIO`).
 - [ ] Confirm I2C is enabled and the PCA9685 responds at `0x40` (`i2cdetect -y 1`).
-- [ ] Reconcile the Python floor if needed (Pi is Bookworm 3.11; `pyproject.toml` already `>=3.11`).
+- [ ] Provision the uv-managed Python 3.13 interpreter on the Pi (dev + deploy both run 3.13, not Bookworm's system 3.11); `pyproject.toml` still declares `>=3.11`.
 
 ## 2. Wiring + channel map
 

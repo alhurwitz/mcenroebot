@@ -97,4 +97,6 @@ Branches: `main` / `develop` / `feature/*`. Conventional commits enforced by com
 
 ## Python version note
 
-`pyproject.toml` requires Python ≥3.11 (mypy and ruff both target py311), matching the Raspberry Pi deployment target (Bookworm, Python 3.11). `.python-version` pins 3.11 and pre-commit hooks run under 3.11; provision the interpreter with `uv python install 3.11` if it isn't already present. The floor was previously 3.13 and was lowered to 3.11 so the dev environment matches the Pi.
+The project runs on **Python 3.13** for both local dev and the Raspberry Pi deploy (provisioned via a uv-managed 3.13 interpreter, not Bookworm's system Python 3.11). `.python-version` pins 3.13 and pre-commit hooks run under 3.13; provision it with `uv python install 3.13` if it isn't already present.
+
+One intentional remaining drift: `pyproject.toml` still declares `requires-python = ">=3.11"` and mypy/ruff still target `py311`, so type/lint checks run against the 3.11 feature set even though the interpreter is 3.13. Raising those to `>=3.13`/`py313` is a separate config change, deliberately out of scope here. (Note: under a 3.13 venv `uv` installs numpy ≥2.5, whose stubs need a `py312`+ mypy target — if you hit a mypy numpy-stub syntax error, that's the cause.)

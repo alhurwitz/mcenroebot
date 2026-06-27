@@ -18,7 +18,7 @@ The V3 rally path (`predictor/`, `swing/`, `RallyCoordinator`) is untouched and 
 | Working directory | `/Users/alberthurwitz/Projects/mcenroebot` |
 | Package | `src/mcenroebot/` (src-layout) |
 | Tests | `tests/` mirror at `tests/test_<name>/test_<concern>.py` |
-| Python | match `pyproject.toml` (≥3.13 floor; Pi/Bookworm 3.11 reconcile is a pre-deploy task, not a code task) |
+| Python | 3.13 for dev + Pi (uv-managed interpreter); `pyproject.toml` still declares `>=3.11` / targets `py311` |
 | Dep manager | `uv` (`uv add` / `uv add --optional pi` — never hand-edit deps) |
 | Coverage floor | 85% project; **≥95% on pure-math (`launch/`)** |
 | Branch | cut `feature/v4-feeder` from `develop` after V2 has merged |
@@ -351,7 +351,8 @@ Merge `feature/v4-feeder` → `develop` after Wave 5's phase gate (vision is a c
   `ball_fired` event instead of open-loop rate.
 - **Two ESCs on one PCA9685.** Confirm channel assignment and shared-ground/power budget before
   wiring; document the channel map in `CLAUDE.md` like the V2 `pan=ch0, tilt=ch1, ESC=ch2` line.
-- **Python floor drift.** `pyproject.toml` says ≥3.13, `implementation-plan.md` says ≥3.11, Pi is
-  Bookworm 3.11. Reconcile before Pi deploy; not a blocker for Waves 1–4 (dev machine).
+- **Python floor drift.** Dev + Pi run Python 3.13 (uv-managed interpreter), but `pyproject.toml`
+  still declares `requires-python = ">=3.11"` and mypy/ruff target `py311`. Raise the config floor to
+  `>=3.13`/`py313` if/when desired; not a blocker for Waves 1–4 (dev machine).
 - **Head-roll servo channel.** Decide whether roll shares the servo driver instance (extra channel)
   or a second instance; reflect in `FeederCoordinator`'s constructor.
