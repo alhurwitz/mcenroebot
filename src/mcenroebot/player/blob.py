@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import cv2
 from numpy.typing import NDArray
 
 from mcenroebot.player.value_objects import PlayerPosition
@@ -47,6 +46,19 @@ class SimpleBlobDetector:
         min_area_frac: float = 0.001,
         full_area_frac: float = 0.1,
     ) -> None:
+        # cv2 is imported lazily so that importing this module (and the whole
+        # coordinator/drill/player chain) never requires a working OpenCV.
+        # Only constructing a real detector needs it; mocks and the mock
+        # coordinator demo do not.
+        try:
+            import cv2
+        except ImportError as exc:  # pragma: no cover - cv2 present in test env
+            raise ImportError(
+                "OpenCV (cv2) is unavailable or broken. The blob detector needs it; "
+                "repair it with the Pi extra (uv sync --extra pi). The mock/non-vision "
+                "paths and the coordinator demo do not require cv2."
+            ) from exc
+        self._cv2 = cv2
         self.half_width_m = half_width_m
         self.threshold = threshold
         self.min_area_frac = min_area_frac
@@ -54,6 +66,7 @@ class SimpleBlobDetector:
 
     def detect(self, frame: NDArray[Any]) -> PlayerPosition | None:
         """Return the player's lateral position, or None if no blob is found."""
+        cv2 = self._cv2
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
         _, mask = cv2.threshold(gray, self.threshold, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
