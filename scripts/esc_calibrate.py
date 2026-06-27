@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 
 from adafruit_servokit import ServoKit
 
@@ -66,8 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         servo.throttle = 1.0
         print("  -> streaming MAX throttle.")
         input(
-            "Step 2: Plug in the LiPo NOW. Wait for the ESC's max-confirm beeps, "
-            "then press Enter: "
+            "Step 2: Plug in the LiPo NOW. Wait for the ESC's max-confirm beeps, then press Enter: "
         )
 
         # Drop to MIN — the ESC records the span and stores it.

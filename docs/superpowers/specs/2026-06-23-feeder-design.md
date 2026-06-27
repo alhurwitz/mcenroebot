@@ -33,7 +33,7 @@ stack**, not just the `aim/` slice the old CLAUDE.md describes. Findings that ch
 | Reuse `aim/`, `clock/`, `camera/`, `drivers/servo/`, `drivers/bldc/` | All present and built | Reuse as-is |
 | `drivers/bldc/` "extends `esc_arm`" | No `esc_arm`; ESC arming lives in `calibrate/EscCalibrator` (`calibrate/esc.py`) | `launch/` throttle helper + Wave 5 reuse `calibrate/EscCalibrator`; drop `esc_arm` references |
 | Shelved: `predictor/`, `swing/`, `ball/`, `coordinator.RallyCoordinator` | All present and fully built | **Archive** to `_shelved/` (see §4) |
-| Python floor `>=3.13`, reconcile to 3.11 before Pi | `pyproject.toml` already `requires-python = ">=3.11"` | **Resolved** — drop this open question |
+| Python floor `>=3.13`, reconcile to 3.11 before Pi | Dev + Pi now run uv-managed Python 3.13; `pyproject.toml` still declares `requires-python = ">=3.11"` | **Updated 2026-06-27** — runtime is 3.13; config floor left at `>=3.11`/`py311` for now |
 | New: `launch/`, `drill/`, `drivers/feeder/`, `drivers/lift/`, `player/` | All correctly absent | Build per waves |
 | Branch `feature/v4-feeder` from `develop` | Currently on `feature/v4`; `develop` exists but is behind | Cut `feature/v4-feeder` from `develop`, carry plan docs forward (see §3) |
 

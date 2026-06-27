@@ -25,7 +25,7 @@ timing envelope.
 
 | Part                                   | Role                                         |
 |----------------------------------------|----------------------------------------------|
-| Raspberry Pi 4 (Bookworm, Python 3.11) | Deploy target                                |
+| Raspberry Pi 4 (Bookworm, Python 3.13 via uv) | Deploy target                         |
 | Adafruit PCA9685 16-channel PWM HAT    | I²C `0x40` — pan=ch0, tilt=ch1, BLDC ESC=ch2 |
 | 2× MG996R servos                       | J1 yaw, J2 pitch (paddle orientation)        |
 | A2212 1000 KV brushless motor + ESC    | J3 paddle swing                              |

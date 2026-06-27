@@ -9,7 +9,7 @@ Paste this entire file into a fresh Claude Code session in `/Users/alberthurwitz
 **Project:** McEnroe is a hobby ping-pong robot. V2 is the aim-and-swat phase: a 3-axis turret with two MG996R servos (J1 yaw, J2 pitch) for aiming, and an A2212 1000 KV brushless motor driven by an ESC (J3) for the open-loop paddle swing.
 
 **Hardware:**
-- Raspberry Pi 4 (Bookworm, Python 3.11) is the deploy target
+- Raspberry Pi 4 (Bookworm, Python 3.13 via uv) is the deploy target
 - Adafruit-style 16-channel PCA9685 PWM HAT at I2C `0x40` — pan=ch0, tilt=ch1, BLDC ESC=ch2 (proposed)
 - Single Logitech webcam at `/dev/video0` (2D — depth recovered from ball-radius monocular estimation)
 - 3S LiPo for the BLDC; servos run off the HAT's screw terminal 5V/3A PSU
