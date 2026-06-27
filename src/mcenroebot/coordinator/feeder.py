@@ -33,17 +33,18 @@ _log = logging.getLogger(__name__)
 class FeederCoordinator:
     """Execute a drill: aim, launch, feed, and recycle, one shot at a time.
 
-    Note on ``aim``: the reused :class:`AimController` treats its geometry's
-    ``arm_length_m`` as a reachability bound. For the feeder that bound is the
-    **placement range**, so construct the ``AimController`` with an
-    ``arm_length_m`` at least as large as the farthest court target; otherwise
-    every shot is reported unreachable and skipped.
+    Pointing is split by domain: ``aim`` owns the horizontal pan angle, while
+    ``launch`` owns the vertical tilt angle (it holds the exit speed needed to
+    solve the ballistic arc). A shot is skipped if its bearing is out of pan
+    range, its arc is out of ballistic range, or its spin/speed is out of the
+    launch envelope.
 
     Args:
         drill: the Drill producing Shots.
-        launch: LaunchController (holds its own LaunchGeometry).
+        launch: LaunchController (holds its own LaunchGeometry); computes both
+            the wheel command and the tilt-servo angle.
         throttle_map: converts wheel rpm to ESC throttle.
-        aim: AimController mapping a target to pan/tilt angles.
+        aim: AimController mapping a target to the pan-servo angle.
         servo: ServoDriver for pan + tilt (may be the same instance as ``head_roll``).
         head_roll: ServoDriver for the head-roll servo.
         wheel_top, wheel_bottom: the two launch-wheel ESC drivers.
@@ -126,15 +127,20 @@ class FeederCoordinator:
             _log.warning("Shot %s out of launch envelope — skipping", spec)
             return
 
-        angles = self._aim.compute(target)
-        if angles is None:
-            _log.warning("Target %s unreachable (out of placement range) — skipping", target)
+        pan = self._aim.pan_angle_for(target)
+        if pan is None:
+            _log.warning("Target %s out of pan range — skipping", target)
+            return
+
+        tilt = self._launch.tilt_angle_for(target, spec)
+        if tilt is None:
+            _log.warning("Target %s out of ballistic range — skipping", target)
             return
 
         # Command head roll, then pan/tilt, then the wheel ESCs.
         self._head_roll.write_angle(self._head_roll_channel, command.head_roll_deg)
-        self._servo.write_angle(self._pan_channel, angles.yaw_deg)
-        self._servo.write_angle(self._tilt_channel, angles.pitch_deg)
+        self._servo.write_angle(self._pan_channel, pan)
+        self._servo.write_angle(self._tilt_channel, tilt)
         top_throttle, bottom_throttle = self._launch.throttles(command, self._throttle_map)
         self._wheel_top.set_throttle(top_throttle)
         self._wheel_bottom.set_throttle(bottom_throttle)
@@ -172,7 +178,7 @@ async def _demo() -> None:
     feeder + lift) against mock drivers and a FakeClock, so it runs anywhere —
     no Pi, no real time. Run with `python -m mcenroebot.coordinator`.
     """
-    from mcenroebot.aim import AimController, TurretGeometry
+    from mcenroebot.aim import AimController
     from mcenroebot.clock import FakeClock
     from mcenroebot.drill import Drill, FixedPatternStrategy, TableTarget
     from mcenroebot.drivers import (
@@ -198,10 +204,12 @@ async def _demo() -> None:
     coordinator = FeederCoordinator(
         drill=drill,
         launch=LaunchController(
-            geometry=LaunchGeometry(wheel_diameter_m=0.055, max_wheel_rpm=10000.0)
+            geometry=LaunchGeometry(
+                wheel_diameter_m=0.055, max_wheel_rpm=10000.0, launch_height_m=0.3
+            )
         ),
         throttle_map=ThrottleMap(rpm_at_full_throttle=10000.0),
-        aim=AimController(TurretGeometry(arm_length_m=5.0)),
+        aim=AimController(),
         servo=servo,
         head_roll=head_roll,
         wheel_top=wheel_top,

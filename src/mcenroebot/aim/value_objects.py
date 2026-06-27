@@ -7,7 +7,7 @@ import math
 import numpy as np
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
-__all__ = ["Position3D", "ServoAngles", "TurretGeometry"]
+__all__ = ["AimGeometry", "Position3D", "ServoAngles"]
 
 
 class Position3D(BaseModel):
@@ -38,11 +38,13 @@ class Position3D(BaseModel):
 
 
 class ServoAngles(BaseModel):
-    """Servo angles for the aim turret, in degrees.
+    """Deprecated V2 turret servo-angle pair (yaw + pitch), in degrees.
 
-    Both angles are clamped to the MG996R's [0, 180] range; values
-    outside that range raise pydantic.ValidationError (which wraps the
-    underlying ValueError so the original message is preserved).
+    Retained only for the shelved V2 rally stack
+    (``mcenroebot._shelved``), which still aims a paddle in both yaw and
+    pitch via :meth:`AimController.compute`. The V4 feeder does not use this:
+    pan comes from :meth:`AimController.pan_angle_for` (a bare float) and tilt
+    from the launch subsystem. Do not use in feeder code.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -54,27 +56,31 @@ class ServoAngles(BaseModel):
     @classmethod
     def _check_servo_range(cls, value: float, info: ValidationInfo) -> float:
         if not (0.0 <= value <= 180.0):
-            raise ValueError(f"{info.field_name}={value} out of MG996R servo range [0, 180]")
+            raise ValueError(f"{info.field_name}={value} out of servo range [0, 180]")
         return value
 
 
-class TurretGeometry(BaseModel):
-    """Fixed physical parameters of the V2 turret.
+class AimGeometry(BaseModel):
+    """Calibrated parameters for horizontal (pan) pointing.
+
+    The aim subsystem only steers in yaw, so the geometry needs a single
+    parameter: the pan-servo angle that points the launch head straight
+    forward (+X).
 
     Attributes
     ----------
-    arm_length_m : float
-        Distance from BLDC shaft center to paddle face, in meters. Used
-        as the reachability bound (targets beyond this distance return
-        no solution).
     yaw_neutral_deg : float
-        Servo angle that points the sweep plane straight forward (+X).
-    pitch_neutral_deg : float
-        Servo angle that puts the sweep plane vertical (BLDC shaft along Y).
+        Pan-servo angle, in degrees, that aims along +X. Must lie within
+        the [0, 180] servo range. Defaults to the mechanical center, 90°.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    arm_length_m: float = 0.20
     yaw_neutral_deg: float = 90.0
-    pitch_neutral_deg: float = 90.0
+
+    @field_validator("yaw_neutral_deg")
+    @classmethod
+    def _check_servo_range(cls, value: float) -> float:
+        if not (0.0 <= value <= 180.0):
+            raise ValueError(f"yaw_neutral_deg={value} out of servo range [0, 180]")
+        return value

@@ -5,9 +5,15 @@ speed, spin magnitude, and spin-axis orientation, it returns the pair of wheel
 rpms and the head-roll servo angle that produce it. It is the feeder analog of
 ``aim`` — pure math, stateless aside from injected geometry, no hardware.
 
+The launch head also owns the *vertical* half of pointing: it holds the exit
+speed, so it solves the ballistic elevation angle and the tilt-servo angle (see
+``ballistics.py`` and :meth:`LaunchController.tilt_angle_for`). Horizontal
+pointing (the pan servo) is the ``aim`` package's job.
+
 Layout
 ------
     value_objects.py  — ShotSpec, WheelCommand, LaunchGeometry, ThrottleMap (frozen pydantic).
+    ballistics.py     — Arc + solve_elevation (pure vacuum projectile solver).
     controller.py     — LaunchController + private `_demo` helper.
     __main__.py       — entry point for `python -m mcenroebot.launch`.
 
@@ -28,6 +34,7 @@ Mechanism
     envelope and ``compute()`` returns None.
 """
 
+from mcenroebot.launch.ballistics import Arc, solve_elevation
 from mcenroebot.launch.controller import LaunchController, _demo
 from mcenroebot.launch.value_objects import (
     LaunchGeometry,
@@ -37,10 +44,12 @@ from mcenroebot.launch.value_objects import (
 )
 
 __all__ = [
+    "Arc",
     "LaunchController",
     "LaunchGeometry",
     "ShotSpec",
     "ThrottleMap",
     "WheelCommand",
     "_demo",
+    "solve_elevation",
 ]

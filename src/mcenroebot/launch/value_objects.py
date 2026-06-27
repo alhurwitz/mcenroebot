@@ -80,7 +80,9 @@ class WheelCommand(BaseModel):
 class LaunchGeometry(BaseModel):
     """Fixed physical / calibrated parameters of the two-wheel launch head.
 
-    Mirrors ``TurretGeometry``: injected config, frozen, reused across calls.
+    Injected config: frozen, reused across calls. Besides the wheel/ball
+    parameters that set exit speed and spin, it carries the ballistic
+    parameters used to solve the launch elevation and tilt-servo angle.
 
     Attributes
     ----------
@@ -94,6 +96,16 @@ class LaunchGeometry(BaseModel):
         eta_spin for the surface-speed differential -> spin transfer, in (0, 1].
     max_wheel_rpm : float
         No-load BLDC rpm ceiling at the deploy voltage. Must be > 0.
+    launch_height_m : float
+        Height of the launch point (ball exit) above the origin, in meters.
+        Must be >= 0.
+    gravity_m_s2 : float
+        Gravitational acceleration used by the ballistic solver, in m/s**2.
+        Must be > 0. Defaults to 9.81.
+    pitch_neutral_deg : float
+        Tilt-servo angle, in degrees, that fires horizontally (elevation 0).
+        Must lie within [0, 180]. Defaults to the mechanical center, 90°;
+        calibrate against the real head later.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -103,8 +115,11 @@ class LaunchGeometry(BaseModel):
     grip_efficiency: float = 0.85
     spin_efficiency: float = 0.85
     max_wheel_rpm: float
+    launch_height_m: float
+    gravity_m_s2: float = 9.81
+    pitch_neutral_deg: float = 90.0
 
-    @field_validator("wheel_diameter_m", "ball_radius_m", "max_wheel_rpm")
+    @field_validator("wheel_diameter_m", "ball_radius_m", "max_wheel_rpm", "gravity_m_s2")
     @classmethod
     def _check_positive(cls, value: float, info: ValidationInfo) -> float:
         if value <= 0.0:
@@ -116,6 +131,20 @@ class LaunchGeometry(BaseModel):
     def _check_efficiency(cls, value: float, info: ValidationInfo) -> float:
         if not (0.0 < value <= 1.0):
             raise ValueError(f"{info.field_name}={value} must be in (0, 1]")
+        return value
+
+    @field_validator("launch_height_m")
+    @classmethod
+    def _check_non_negative(cls, value: float, info: ValidationInfo) -> float:
+        if value < 0.0:
+            raise ValueError(f"{info.field_name}={value} must be >= 0")
+        return value
+
+    @field_validator("pitch_neutral_deg")
+    @classmethod
+    def _check_servo_range(cls, value: float, info: ValidationInfo) -> float:
+        if not (0.0 <= value <= 180.0):
+            raise ValueError(f"{info.field_name}={value} out of servo range [0, 180]")
         return value
 
 

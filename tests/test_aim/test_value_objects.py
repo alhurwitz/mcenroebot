@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from mcenroebot.aim import Position3D, ServoAngles, TurretGeometry
+from mcenroebot.aim import AimGeometry, Position3D, ServoAngles
 
 
 class TestPosition3D:
@@ -32,8 +32,36 @@ class TestPosition3D:
         with pytest.raises(ValidationError):
             p.x = 1.0  # type: ignore[misc]
 
+    def test_is_hashable(self) -> None:
+        # Frozen pydantic models are hashable, which is useful for caching
+        # aim solutions keyed on (position, geometry).
+        p = Position3D(x=1.0, y=2.0, z=3.0)
+        assert hash(p) == hash(Position3D(x=1.0, y=2.0, z=3.0))
+
+
+class TestAimGeometry:
+    def test_default_yaw_neutral(self) -> None:
+        g = AimGeometry()
+        assert g.yaw_neutral_deg == pytest.approx(90.0)
+
+    def test_can_override_yaw_neutral(self) -> None:
+        g = AimGeometry(yaw_neutral_deg=85.0)
+        assert g.yaw_neutral_deg == pytest.approx(85.0)
+
+    @pytest.mark.parametrize("value", [-0.1, 180.1, 200.0])
+    def test_yaw_neutral_out_of_servo_range_raises(self, value: float) -> None:
+        with pytest.raises(ValidationError, match=r"yaw_neutral_deg"):
+            AimGeometry(yaw_neutral_deg=value)
+
+    def test_is_frozen(self) -> None:
+        g = AimGeometry()
+        with pytest.raises(ValidationError):
+            g.yaw_neutral_deg = 45.0  # type: ignore[misc]
+
 
 class TestServoAngles:
+    """``ServoAngles`` is a deprecated V2 shim kept for the shelved rally."""
+
     def test_in_range_values_are_accepted(self) -> None:
         a = ServoAngles(yaw_deg=45.0, pitch_deg=120.0)
         assert a.yaw_deg == 45.0
@@ -44,50 +72,13 @@ class TestServoAngles:
         ServoAngles(yaw_deg=180.0, pitch_deg=180.0)
 
     @pytest.mark.parametrize(
-        "yaw,pitch",
-        [
-            (-0.1, 90.0),
-            (180.1, 90.0),
-            (90.0, -1.0),
-            (90.0, 200.0),
-        ],
+        "yaw,pitch", [(-0.1, 90.0), (180.1, 90.0), (90.0, -1.0), (90.0, 200.0)]
     )
     def test_out_of_range_raises(self, yaw: float, pitch: float) -> None:
-        # Pydantic wraps the underlying ValueError; the original message is
-        # preserved inside ValidationError's str repr, so the regex still
-        # finds it.
-        with pytest.raises(ValidationError, match=r"out of MG996R servo range"):
+        with pytest.raises(ValidationError, match=r"out of servo range"):
             ServoAngles(yaw_deg=yaw, pitch_deg=pitch)
 
-
-class TestTurretGeometry:
-    def test_defaults_match_v2_design(self) -> None:
-        g = TurretGeometry()
-        assert g.arm_length_m == pytest.approx(0.20)
-        assert g.yaw_neutral_deg == pytest.approx(90.0)
-        assert g.pitch_neutral_deg == pytest.approx(90.0)
-
-    def test_can_override_defaults(self) -> None:
-        g = TurretGeometry(arm_length_m=0.25, yaw_neutral_deg=85.0)
-        assert g.arm_length_m == pytest.approx(0.25)
-        assert g.yaw_neutral_deg == pytest.approx(85.0)
-        # Unspecified field falls back to default.
-        assert g.pitch_neutral_deg == pytest.approx(90.0)
-
-
-class TestImmutability:
-    def test_servoangles_is_frozen(self) -> None:
+    def test_is_frozen(self) -> None:
         a = ServoAngles(yaw_deg=10.0, pitch_deg=20.0)
         with pytest.raises(ValidationError):
             a.yaw_deg = 99.0  # type: ignore[misc]
-
-    def test_turretgeometry_is_frozen(self) -> None:
-        g = TurretGeometry()
-        with pytest.raises(ValidationError):
-            g.arm_length_m = 0.5  # type: ignore[misc]
-
-    def test_position3d_is_hashable(self) -> None:
-        # Frozen pydantic models are hashable, which is useful for caching
-        # aim solutions keyed on (position, geometry).
-        p = Position3D(x=1.0, y=2.0, z=3.0)
-        assert hash(p) == hash(Position3D(x=1.0, y=2.0, z=3.0))
