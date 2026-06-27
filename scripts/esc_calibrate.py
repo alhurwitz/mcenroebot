@@ -38,16 +38,27 @@ import sys
 
 from adafruit_servokit import ServoKit
 
-# Standard unidirectional ESC pulse range (microseconds).
-MIN_US = 1000
-MAX_US = 2000
+# Channels/pulse range from the shared map; fall back to literals so a broken
+# package import can never block a bench session.
+try:
+    from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, WHEEL_TOP
+
+    DEFAULT_CHANNEL = WHEEL_TOP
+    MIN_US = ESC_MIN_US
+    MAX_US = ESC_MAX_US
+except Exception:
+    DEFAULT_CHANNEL = 3
+    MIN_US = 1000
+    MAX_US = 2000
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Teach an ESC its min/max throttle endpoints (real hardware)."
     )
-    parser.add_argument("--channel", type=int, default=2, help="PCA9685 channel (default: 2)")
+    parser.add_argument(
+        "--channel", type=int, default=DEFAULT_CHANNEL, help="PCA9685 channel (default: top wheel)"
+    )
     args = parser.parse_args(argv)
     ch = args.channel
 

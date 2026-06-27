@@ -24,6 +24,7 @@ from mcenroebot.drivers.bldc import BLDCDriver, MockBLDCDriver, PCA9685BLDCDrive
 from mcenroebot.drivers.feeder import FeederDriver, MockFeederDriver, Pca9685FeederDriver
 from mcenroebot.drivers.lift import (
     GpioHopperSensor,
+    GpioLiftDriver,
     HopperSensor,
     LiftDriver,
     MockHopperSensor,
@@ -36,6 +37,7 @@ __all__ = [
     "BLDCDriver",
     "FeederDriver",
     "GpioHopperSensor",
+    "GpioLiftDriver",
     "HopperSensor",
     "LiftDriver",
     "MockBLDCDriver",

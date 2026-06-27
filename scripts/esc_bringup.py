@@ -13,8 +13,8 @@ so you can verify:
     uv run python esc_bringup.py
 
 WIRING NOTES
-  - Top wheel ESC signal  -> PCA9685 channel 2
-  - Bottom wheel ESC signal -> PCA9685 channel 3
+  - Top wheel ESC signal    -> PCA9685 channel 3
+  - Bottom wheel ESC signal -> PCA9685 channel 4
   - Both ESC power (XT60) -> 3S LiPo via a Y-harness.
   - Lift the red (+5V BEC) wire on BOTH ESC servo connectors; power the
     PCA9685 servo rail from the HAT 5V/3A PSU. Keep the black (GND) wire
@@ -32,12 +32,20 @@ import time
 
 from adafruit_servokit import ServoKit
 
-TOP_CHANNEL = 2
-BOTTOM_CHANNEL = 3
+# Channels come from the shared map; fall back to literals so a broken package
+# import can never block a bench session.
+try:
+    from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, WHEEL_BOTTOM, WHEEL_TOP
 
-# Standard unidirectional ESC pulse range (microseconds).
-MIN_US = 1000
-MAX_US = 2000
+    TOP_CHANNEL = WHEEL_TOP
+    BOTTOM_CHANNEL = WHEEL_BOTTOM
+    MIN_US = ESC_MIN_US
+    MAX_US = ESC_MAX_US
+except Exception:
+    TOP_CHANNEL = 3
+    BOTTOM_CHANNEL = 4
+    MIN_US = 1000
+    MAX_US = 2000
 
 # Bench-test safety cap. throttle is 0.0..1.0 of the usable range above arm.
 # 0.35 is plenty to confirm spin/direction without flinging anything.
