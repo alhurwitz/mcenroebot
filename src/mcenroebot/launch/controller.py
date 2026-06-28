@@ -139,10 +139,14 @@ class LaunchController:
         return min(180.0, max(0.0, tilt_deg))
 
     def throttles(self, command: WheelCommand, throttle_map: ThrottleMap) -> tuple[float, float]:
-        """Convert a :class:`WheelCommand` to (top, bottom) ESC throttles in [0, 1]."""
+        """Convert a :class:`WheelCommand` to (top, bottom) ESC throttles in [0, 1].
+
+        Each wheel is mapped with its own deadband floor, so a commanded
+        top/bottom rpm pair lands in each wheel's live throttle band.
+        """
         return (
-            throttle_map.throttle_for(command.top_rpm),
-            throttle_map.throttle_for(command.bottom_rpm),
+            throttle_map.throttle_for_top(command.top_rpm),
+            throttle_map.throttle_for_bottom(command.bottom_rpm),
         )
 
     def _rpm(self, u_surface: float) -> float:

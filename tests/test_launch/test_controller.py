@@ -196,6 +196,15 @@ class TestThrottles:
         assert top == 1.0
         assert bottom == 0.0
 
+    def test_throttles_use_per_wheel_floors(self, controller: LaunchController) -> None:
+        # Equal commanded rpm, different per-wheel floors -> different throttles.
+        cmd = WheelCommand(top_rpm=5000.0, bottom_rpm=5000.0, head_roll_deg=0.0)
+        tm = ThrottleMap(rpm_at_full_throttle=10000.0, top_floor=0.08, bottom_floor=0.05)
+        top, bottom = controller.throttles(cmd, tm)
+        assert top == pytest.approx(0.08 + 0.5 * 0.92)
+        assert bottom == pytest.approx(0.05 + 0.5 * 0.95)
+        assert top > bottom
+
 
 class TestDemo:
     def test_demo_runs_without_error(self, capsys: pytest.CaptureFixture[str]) -> None:

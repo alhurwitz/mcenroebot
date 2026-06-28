@@ -149,25 +149,27 @@ class LaunchGeometry(BaseModel):
 
 
 class ThrottleMap(BaseModel):
-    """Calibrated rpm <-> ESC throttle [0, 1] mapping (linear v1 model).
+    """Calibrated rpm <-> ESC throttle [0, 1] mapping with per-wheel deadbands.
 
     Attributes
     ----------
     rpm_at_full_throttle : float
         Measured wheel rpm at throttle 1.0. Must be > 0.
-    throttle_floor : float
-        ESC startup deadband: the lowest throttle at which the motor actually
-        spins, in [0, 1). Any commanded rpm > 0 is remapped into
-        ``[throttle_floor, 1]`` so low-speed shots clear the deadband instead
-        of commanding a throttle the ESC ignores. ``rpm == 0`` still maps to 0
-        (wheel off). Measured via scripts/esc_calibrate.py + esc_bringup.py;
-        update with the *loaded* value once calibrate_launch.py runs.
+    top_floor, bottom_floor : float
+        Per-wheel ESC startup deadband in [0, 1): the lowest throttle at which
+        that wheel actually spins under load. The two wheels rarely match (a
+        measured pair was top 0.08 / bottom 0.05), so each carries its own
+        floor. Any commanded rpm > 0 is remapped into ``[floor, 1]`` for that
+        wheel so low-speed shots clear the deadband instead of commanding a
+        throttle the ESC ignores; ``rpm == 0`` still maps to 0 (wheel off).
+        Provisional until calibrate_launch.py measures loaded values per wheel.
     """
 
     model_config = ConfigDict(frozen=True)
 
     rpm_at_full_throttle: float
-    throttle_floor: float = 0.0
+    top_floor: float = 0.0
+    bottom_floor: float = 0.0
 
     @field_validator("rpm_at_full_throttle")
     @classmethod
@@ -176,21 +178,32 @@ class ThrottleMap(BaseModel):
             raise ValueError(f"rpm_at_full_throttle={value} must be > 0")
         return value
 
-    @field_validator("throttle_floor")
+    @field_validator("top_floor", "bottom_floor")
     @classmethod
-    def _check_floor(cls, value: float) -> float:
+    def _check_floor(cls, value: float, info: ValidationInfo) -> float:
         if not (0.0 <= value < 1.0):
-            raise ValueError(f"throttle_floor={value} must be in [0, 1)")
+            raise ValueError(f"{info.field_name}={value} must be in [0, 1)")
         return value
 
-    def throttle_for(self, rpm: float) -> float:
-        """Convert a wheel rpm to an ESC throttle in [0, 1] (clamped).
+    def throttle_for(self, rpm: float, floor: float = 0.0) -> float:
+        """Map a wheel rpm to an ESC throttle in [0, 1], remapped into ``[floor, 1]``.
 
         ``rpm <= 0`` returns 0.0 (wheel off). Any positive rpm is mapped into
-        ``[throttle_floor, 1]`` so it clears the ESC startup deadband.
+        ``[floor, 1]`` so it clears the ESC startup deadband. Prefer the
+        per-wheel helpers :meth:`throttle_for_top` / :meth:`throttle_for_bottom`,
+        which supply the matching floor; this method takes an explicit floor
+        (default 0.0 = plain linear) for generic use.
         """
         if rpm <= 0.0:
             return 0.0
         frac = rpm / self.rpm_at_full_throttle
-        throttle = self.throttle_floor + frac * (1.0 - self.throttle_floor)
+        throttle = floor + frac * (1.0 - floor)
         return min(1.0, max(0.0, throttle))
+
+    def throttle_for_top(self, rpm: float) -> float:
+        """Throttle for the top wheel, using ``top_floor``."""
+        return self.throttle_for(rpm, self.top_floor)
+
+    def throttle_for_bottom(self, rpm: float) -> float:
+        """Throttle for the bottom wheel, using ``bottom_floor``."""
+        return self.throttle_for(rpm, self.bottom_floor)
