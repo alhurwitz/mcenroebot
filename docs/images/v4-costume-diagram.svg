@@ -1,0 +1,305 @@
+<svg viewBox="0 0 1280 900" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#475569"/>
+    </marker>
+    <marker id="flow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#0ea5e9"/>
+    </marker>
+    <style>
+      .title { font-size: 24px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-size: 13px; fill: #64748b; }
+      .panel { font-size: 15px; font-weight: 700; fill: #334155; }
+      .lab { font-size: 12.5px; fill: #1e293b; }
+      .labb { font-size: 12.5px; font-weight: 700; fill: #1e293b; }
+      .sub { font-size: 10.5px; fill: #64748b; }
+      .leader { stroke: #94a3b8; stroke-width: 1; fill: none; }
+      .step { font-size: 12px; font-weight: 700; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="900" fill="#fbfcfe"/>
+  <text x="40" y="44" class="title">McEnroe V4 — "The Costume": labeled cutaway</text>
+  <text x="40" y="64" class="subtitle">Humanoid shell over the existing feeder stack. Left: front cutaway (component stack). Right: side view (ball recycle loop).</text>
+  <line x1="40" y1="78" x2="1240" y2="78" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- ============ PANEL A : FRONT CUTAWAY ============ -->
+  <text x="60" y="108" class="panel">FRONT CUTAWAY</text>
+
+  <!-- cosmetic shell -->
+  <g>
+    <!-- hair shell -->
+    <path d="M 248,150 A 72,72 0 0 1 392,150 L 392,128 A 72,80 0 0 0 248,128 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.5"/>
+    <!-- head -->
+    <circle cx="320" cy="150" r="72" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <!-- red headband -->
+    <path d="M 250,132 A 72,72 0 0 1 390,132 L 390,120 A 72,72 0 0 0 250,120 Z" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+    <!-- eyes = stereo camera -->
+    <circle cx="298" cy="158" r="11" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="342" cy="158" r="11" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="298" cy="158" r="4" fill="#3b82f6"/>
+    <circle cx="342" cy="158" r="4" fill="#3b82f6"/>
+    <!-- neck + collar -->
+    <rect x="300" y="218" width="40" height="22" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 280,242 Q 320,232 360,242 L 360,250 Q 320,240 280,250 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.2"/>
+    <!-- torso shell (see-through) -->
+    <rect x="242" y="240" width="156" height="362" rx="26" fill="#f8fafc" fill-opacity="0.55" stroke="#94a3b8" stroke-width="2"/>
+    <!-- decorative arm + racket (right) -->
+    <rect x="398" y="262" width="16" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+    <ellipse cx="438" cy="300" rx="22" ry="30" fill="none" stroke="#cbd5e1" stroke-width="6"/>
+    <line x1="420" y1="360" x2="430" y2="328" stroke="#cbd5e1" stroke-width="6"/>
+    <!-- left arm -->
+    <rect x="226" y="262" width="16" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+    <!-- base pedestal -->
+    <path d="M 286,602 L 354,602 L 372,664 L 268,664 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+    <rect x="228" y="664" width="184" height="20" rx="6" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.5"/>
+  </g>
+
+  <!-- internal components (front) -->
+  <!-- hopper cone -->
+  <path d="M 256,250 L 384,250 L 346,332 L 294,332 Z" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <g fill="#fb923c" stroke="#ea580c" stroke-width="0.5">
+    <circle cx="288" cy="266" r="5"/><circle cx="304" cy="268" r="5"/><circle cx="320" cy="264" r="5"/>
+    <circle cx="336" cy="268" r="5"/><circle cx="352" cy="266" r="5"/><circle cx="297" cy="282" r="5"/>
+    <circle cx="313" cy="284" r="5"/><circle cx="329" cy="282" r="5"/><circle cx="345" cy="284" r="5"/>
+    <circle cx="312" cy="300" r="5"/><circle cx="328" cy="300" r="5"/><circle cx="320" cy="316" r="5"/>
+  </g>
+
+  <!-- escapement -->
+  <rect x="296" y="336" width="48" height="22" rx="4" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+  <circle cx="320" cy="347" r="7" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+
+  <!-- swing cone keep-out (dashed) -->
+  <path d="M 320,398 L 252,470 L 388,470 Z" fill="#ef4444" fill-opacity="0.06" stroke="#ef4444" stroke-width="1" stroke-dasharray="5 4"/>
+
+  <!-- launch wheels + motors -->
+  <rect x="276" y="378" width="14" height="42" rx="3" fill="#e2e8f0" stroke="#64748b" stroke-width="1.2"/>
+  <rect x="350" y="378" width="14" height="42" rx="3" fill="#e2e8f0" stroke="#64748b" stroke-width="1.2"/>
+  <circle cx="306" cy="399" r="24" fill="#fee2e2" stroke="#ef4444" stroke-width="2.5"/>
+  <circle cx="334" cy="399" r="24" fill="#fee2e2" stroke="#ef4444" stroke-width="2.5"/>
+  <path d="M 306,388 a 8,11 0 1 0 0,22" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+  <path d="M 334,410 a 8,11 0 1 0 0,-22" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+
+  <!-- gimbal -->
+  <rect x="298" y="420" width="44" height="14" rx="4" fill="#fecaca" stroke="#ef4444" stroke-width="1.5"/>
+
+  <!-- stomach exit port + ball -->
+  <ellipse cx="320" cy="444" rx="19" ry="11" fill="#fff" stroke="#ef4444" stroke-width="2"/>
+  <ellipse cx="320" cy="446" rx="11" ry="6" fill="#0f172a" fill-opacity="0.12"/>
+  <circle cx="320" cy="470" r="8" fill="#fb923c" stroke="#ea580c" stroke-width="1"/>
+
+  <!-- electronics bay -->
+  <rect x="252" y="458" width="136" height="74" rx="5" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+  <rect x="258" y="464" width="124" height="18" rx="2" fill="#a7f3d0" stroke="#10b981" stroke-width="1"/>
+  <text x="320" y="477" class="sub" text-anchor="middle" fill="#065f46">Pi 5 + PCA9685</text>
+  <g fill="#6ee7b7" stroke="#059669" stroke-width="0.8">
+    <rect x="260" y="488" width="11" height="20"/><rect x="274" y="488" width="11" height="20"/>
+    <rect x="288" y="488" width="11" height="20"/><rect x="302" y="488" width="11" height="20"/>
+  </g>
+  <text x="285" y="503" class="sub" text-anchor="middle" fill="#065f46" font-size="8">4× ESC</text>
+  <rect x="320" y="488" width="26" height="20" rx="2" fill="#6ee7b7" stroke="#059669" stroke-width="0.8"/>
+  <text x="333" y="501" class="sub" text-anchor="middle" fill="#065f46" font-size="8">L298N</text>
+  <rect x="350" y="488" width="30" height="20" rx="2" fill="#6ee7b7" stroke="#059669" stroke-width="0.8"/>
+  <text x="365" y="498" class="sub" text-anchor="middle" fill="#065f46" font-size="7.5">buck/</text>
+  <text x="365" y="506" class="sub" text-anchor="middle" fill="#065f46" font-size="7.5">BEC</text>
+
+  <!-- LiPo drawer -->
+  <rect x="262" y="540" width="116" height="30" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <rect x="372" y="548" width="8" height="14" rx="2" fill="#c4b5fd" stroke="#7c3aed" stroke-width="1"/>
+  <text x="316" y="559" class="sub" text-anchor="middle" fill="#5b21b6">3S LiPo</text>
+
+  <!-- ===== leader lines + labels (front) ===== -->
+  <!-- right side labels -->
+  <g>
+    <path class="leader" d="M 353,158 L 470,150"/><circle cx="353" cy="158" r="2.5" fill="#3b82f6"/>
+    <text x="476" y="146" class="labb" fill="#1d4ed8">ELP stereo camera = eyes</text>
+    <text x="476" y="161" class="sub">two OV9281 lenses; looks down at landing zone</text>
+
+    <path class="leader" d="M 388,124 L 470,108"/>
+    <text x="476" y="106" class="lab">Red headband (separate part, hides seam)</text>
+
+    <path class="leader" d="M 384,290 L 470,250"/><circle cx="384" cy="290" r="2.5" fill="#f59e0b"/>
+    <text x="476" y="246" class="labb" fill="#b45309">Hopper cone (~80 balls)</text>
+    <text x="476" y="261" class="sub">chest/neck; gravity-feeds down via funnel + boot</text>
+
+    <path class="leader" d="M 344,347 L 470,330"/><circle cx="344" cy="347" r="2.5" fill="#f59e0b"/>
+    <text x="476" y="327" class="labb" fill="#b45309">Escapement disk — ch5</text>
+    <text x="476" y="342" class="sub">cont.-rotation servo; releases 1 ball / rev</text>
+
+    <path class="leader" d="M 358,399 L 470,402"/><circle cx="358" cy="399" r="2.5" fill="#ef4444"/>
+    <text x="476" y="398" class="labb" fill="#b91c1c">Launch wheels ×2 + A2212 motors</text>
+    <text x="476" y="413" class="sub">counter-rotating; ESCs ch3 (top) / ch4 (bottom)</text>
+
+    <path class="leader" d="M 342,427 L 470,448"/><circle cx="342" cy="427" r="2.5" fill="#ef4444"/>
+    <text x="476" y="446" class="labb" fill="#b91c1c">Pan / tilt / head-roll gimbal</text>
+    <text x="476" y="461" class="sub">ch0 / ch1 / ch2 — aim + spin axis</text>
+
+    <path class="leader" d="M 339,470 L 470,492"/><circle cx="328" cy="470" r="2.5" fill="#ef4444"/>
+    <text x="476" y="490" class="labb" fill="#b91c1c">Stomach exit port</text>
+    <text x="476" y="505" class="sub">lower lip sloped out-and-down (jam insurance)</text>
+
+    <path class="leader" d="M 388,495 L 470,535"/><circle cx="388" cy="495" r="2.5" fill="#10b981"/>
+    <text x="476" y="533" class="labb" fill="#047857">Electronics bay (below + behind swing cone)</text>
+    <text x="476" y="548" class="sub">Pi 5 + PCA9685, 4× ESC, L298N, buck + BEC</text>
+
+    <path class="leader" d="M 378,555 L 470,575"/><circle cx="378" cy="555" r="2.5" fill="#8b5cf6"/>
+    <text x="476" y="573" class="labb" fill="#6d28d9">LiPo drawer (waistband)</text>
+    <text x="476" y="588" class="sub">low CG, pull-out, XT60 reachable for charging</text>
+  </g>
+  <!-- left side labels -->
+  <g text-anchor="end">
+    <path class="leader" d="M 256,140 L 170,120"/>
+    <text x="164" y="124" class="lab">80s perm = top/back shell</text>
+
+    <path class="leader" d="M 282,246 L 170,232"/>
+    <text x="164" y="236" class="lab">Polo collar = base ring</text>
+
+    <path class="leader" d="M 300,434 L 170,360"/><circle cx="300" cy="434" r="2.5" fill="#ef4444"/>
+    <text x="164" y="356" class="labb" fill="#b91c1c" text-anchor="end">Swing cone (keep-out)</text>
+    <text x="164" y="371" class="sub" text-anchor="end">wheels sweep this wedge — nothing intrudes</text>
+
+    <path class="leader" d="M 270,664 L 170,664"/>
+    <text x="164" y="660" class="labb" text-anchor="end">Wide base</text>
+    <text x="164" y="675" class="sub" text-anchor="end">low CG, anti-tip vs firing recoil</text>
+
+    <path class="leader" d="M 226,300 L 170,300"/>
+    <text x="164" y="296" class="lab" text-anchor="end">Racket = decorative only</text>
+  </g>
+
+  <!-- divider -->
+  <line x1="700" y1="92" x2="700" y2="800" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- ============ PANEL B : SIDE VIEW / RECYCLE LOOP ============ -->
+  <text x="724" y="108" class="panel">SIDE VIEW — BALL RECYCLE LOOP</text>
+  <text x="724" y="126" class="subtitle">Machine faces the table (right). Closed loop: fire → arc → land → catch → lift → refill.</text>
+
+  <!-- table + net -->
+  <line x1="724" y1="690" x2="1240" y2="690" stroke="#cbd5e1" stroke-width="3"/>
+  <text x="1150" y="708" class="sub" fill="#94a3b8">table surface (0.76 m)</text>
+  <line x1="1090" y1="690" x2="1090" y2="648" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="1078" y1="648" x2="1102" y2="648" stroke="#94a3b8" stroke-width="3"/>
+  <text x="1090" y="640" class="sub" text-anchor="middle" fill="#94a3b8">net</text>
+
+  <!-- side shell -->
+  <g>
+    <circle cx="812" cy="150" r="56" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 756,150 A 56,56 0 0 1 868,150 L 868,134 A 56,62 0 0 0 756,134 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.2"/>
+    <path d="M 758,132 A 56,56 0 0 1 866,132 L 866,122 A 56,56 0 0 0 758,122 Z" fill="#ef4444" stroke="#b91c1c" stroke-width="0.8"/>
+    <circle cx="838" cy="156" r="9" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="838" cy="156" r="3.5" fill="#3b82f6"/>
+    <!-- torso side (back = left, front = right) -->
+    <path d="M 772,222 Q 768,212 786,210 L 850,210 Q 872,214 872,250 L 872,600 Q 872,624 852,626 L 792,626 Q 772,624 772,600 Z" fill="#f8fafc" fill-opacity="0.55" stroke="#94a3b8" stroke-width="2"/>
+    <!-- base -->
+    <path d="M 800,626 L 852,626 L 872,690 L 782,690 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  </g>
+
+  <!-- auger up the back (left edge) -->
+  <line x1="792" y1="660" x2="800" y2="262" stroke="#f59e0b" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+  <g stroke="#b45309" stroke-width="1.6">
+    <line x1="786" y1="640" x2="806" y2="632"/><line x1="786" y1="608" x2="806" y2="600"/>
+    <line x1="787" y1="576" x2="805" y2="568"/><line x1="788" y1="544" x2="804" y2="536"/>
+    <line x1="789" y1="512" x2="803" y2="504"/><line x1="790" y1="480" x2="802" y2="472"/>
+    <line x1="791" y1="448" x2="801" y2="440"/><line x1="792" y1="416" x2="800" y2="408"/>
+    <line x1="793" y1="384" x2="799" y2="376"/><line x1="794" y1="352" x2="798" y2="344"/>
+    <line x1="795" y1="320" x2="797" y2="312"/>
+  </g>
+
+  <!-- hopper (side) -->
+  <path d="M 806,252 L 862,252 L 846,322 L 822,322 Z" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <g fill="#fb923c" stroke="#ea580c" stroke-width="0.5">
+    <circle cx="820" cy="266" r="4.5"/><circle cx="834" cy="268" r="4.5"/><circle cx="848" cy="266" r="4.5"/>
+    <circle cx="828" cy="282" r="4.5"/><circle cx="842" cy="282" r="4.5"/><circle cx="834" cy="300" r="4.5"/>
+  </g>
+
+  <!-- escapement + wheels (side: one behind the other) -->
+  <rect x="820" y="328" width="44" height="20" rx="4" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+  <circle cx="848" cy="400" r="26" fill="#fee2e2" stroke="#ef4444" stroke-width="2"/>
+  <circle cx="832" cy="400" r="26" fill="#fee2e2" stroke="#ef4444" stroke-width="2.5"/>
+
+  <!-- exit port (front/right belly) -->
+  <path d="M 868,432 q 18,2 22,16 l -4,8 q -16,-8 -20,-4 Z" fill="#fff" stroke="#ef4444" stroke-width="2"/>
+
+  <!-- catch net (front, down to trough) -->
+  <path d="M 884,452 L 1000,640 L 900,640 Z" fill="#0ea5e9" fill-opacity="0.05" stroke="#7dd3fc" stroke-width="1" stroke-dasharray="3 3"/>
+  <g stroke="#bae6fd" stroke-width="0.7">
+    <line x1="905" y1="500" x2="965" y2="560"/><line x1="892" y1="520" x2="945" y2="580"/>
+    <line x1="930" y1="490" x2="980" y2="600"/>
+  </g>
+  <!-- trough -->
+  <path d="M 896,636 Q 950,660 1004,636 L 1004,648 Q 950,672 896,648 Z" fill="#fde68a" stroke="#f59e0b" stroke-width="1.8"/>
+
+  <!-- ball flight parabola -->
+  <path d="M 892,448 Q 1010,360 1140,612" fill="none" stroke="#0ea5e9" stroke-width="2.2" stroke-dasharray="2 5" marker-end="url(#flow)"/>
+  <circle cx="892" cy="448" r="7" fill="#fb923c" stroke="#ea580c" stroke-width="1"/>
+
+  <!-- return roll arrow -->
+  <path d="M 1135,668 Q 1040,700 1006,660" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="2 5" marker-end="url(#flow)"/>
+  <!-- trough -> auger base -->
+  <path d="M 944,660 Q 880,690 798,648" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="2 5" marker-end="url(#flow)"/>
+  <!-- auger top -> hopper -->
+  <path d="M 800,260 Q 808,248 822,262" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="2 5" marker-end="url(#flow)"/>
+
+  <!-- numbered steps -->
+  <g>
+    <circle cx="952" cy="392" r="11" fill="#0ea5e9"/><text x="952" y="396" class="step" text-anchor="middle">1</text>
+    <circle cx="1010" cy="352" r="11" fill="#0ea5e9"/><text x="1010" y="356" class="step" text-anchor="middle">2</text>
+    <circle cx="1140" cy="636" r="11" fill="#0ea5e9"/><text x="1140" y="640" class="step" text-anchor="middle">3</text>
+    <circle cx="1004" cy="676" r="11" fill="#0ea5e9"/><text x="1004" y="680" class="step" text-anchor="middle">4</text>
+    <circle cx="770" cy="450" r="11" fill="#0ea5e9"/><text x="770" y="454" class="step" text-anchor="middle">5</text>
+    <circle cx="788" cy="250" r="11" fill="#0ea5e9"/><text x="788" y="254" class="step" text-anchor="middle">6</text>
+  </g>
+
+  <!-- side labels -->
+  <g>
+    <path class="leader" d="M 862,287 L 1040,250"/><circle cx="862" cy="287" r="2.5" fill="#f59e0b"/>
+    <text x="1046" y="247" class="labb" fill="#b45309">Hopper (refill point)</text>
+
+    <path class="leader" d="M 800,470 L 700,470" stroke="none"/>
+    <text x="724" y="486" class="labb" fill="#b45309">⑤ Auger lift</text>
+    <text x="724" y="501" class="sub">screw up the spine → GPIO18 PWM → L298N ENA</text>
+
+    <path class="leader" d="M 858,400 L 1040,400"/><circle cx="858" cy="400" r="2.5" fill="#ef4444"/>
+    <text x="1046" y="397" class="labb" fill="#b91c1c">Launch wheels (one behind the other)</text>
+    <text x="1046" y="412" class="sub">ball exits front belly → ① fired</text>
+
+    <path class="leader" d="M 1000,644 L 1046,628"/><circle cx="1000" cy="642" r="2.5" fill="#f59e0b"/>
+    <text x="1046" y="612" class="labb" fill="#b45309">④ Catch net → trough</text>
+    <text x="1046" y="627" class="sub">returns roll in; lower lip prevents jam-back</text>
+  </g>
+
+  <!-- step legend (side) -->
+  <g transform="translate(724,724)">
+    <text x="0" y="0" class="sub" fill="#0369a1" font-weight="700">Loop:</text>
+    <text x="44" y="0" class="sub">① fire out stomach → ② arc over net → ③ land &amp; opponent returns → ④ catch in trough → ⑤ auger lifts → ⑥ hopper refills</text>
+  </g>
+
+  <!-- ============ LEGEND ============ -->
+  <g transform="translate(40,828)">
+    <rect x="0" y="0" width="1200" height="48" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+    <text x="16" y="29" class="labb">Subsystems:</text>
+    <g transform="translate(118,12)">
+      <rect x="0" y="6" width="16" height="16" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+      <text x="22" y="19" class="lab">Vision (stereo cam)</text>
+    </g>
+    <g transform="translate(300,12)">
+      <rect x="0" y="6" width="16" height="16" rx="3" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="22" y="19" class="lab">Feed loop (hopper · escapement · auger · trough)</text>
+    </g>
+    <g transform="translate(620,12)">
+      <rect x="0" y="6" width="16" height="16" rx="3" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+      <text x="22" y="19" class="lab">Launch (wheels · motors · gimbal · port)</text>
+    </g>
+    <g transform="translate(905,12)">
+      <rect x="0" y="6" width="16" height="16" rx="3" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+      <text x="22" y="19" class="lab">Electronics</text>
+    </g>
+    <g transform="translate(1035,12)">
+      <rect x="0" y="6" width="16" height="16" rx="3" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+      <text x="22" y="19" class="lab">Power</text>
+    </g>
+    <g transform="translate(1120,12)">
+      <rect x="0" y="6" width="16" height="16" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+      <text x="22" y="19" class="lab">Shell</text>
+    </g>
+  </g>
+</svg>
