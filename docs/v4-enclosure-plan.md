@@ -264,9 +264,43 @@ core**. Final working set:
 - **Electronics tray** — the centerpiece that mounts Pi+PCA9685 / 4× ESC rack / L298N / bucks and ties
   the bay together. *Blocked on the swing-cone keep-out measurement (§7).*
 - **Stomach port ring** — funnel + out-and-down lower lip. *Blocked on committed exit height + final aim cone.*
-- **Feed-loop parts (remaining)** — escapement disk (90 mm OD, 42 mm pocket, 608 seat), hopper cone, trough.
-  The **auger tube + screw are now generated as stackable segments** (see §8 “Auger — finalized geometry”)
-  and supersede the FEEDER_PLAN bore. (Other feed geometry still per `FEEDER_PLAN.md`.)
+- **Feed-loop parts** — escapement disk (90 mm OD, 42 mm pocket, 608 seat), hopper cone, trough. Auger geometry finalized — see below. (Feed-loop geometry also specified in `FEEDER_PLAN.md`.)
+
+#### Auger — finalized geometry (June 2026)
+
+**Root cause resolved:** center-shaft auger requires tube ID ≥ ~2× ball diameter + core for the ball to sit beside the core. 46 mm and 56 mm ID attempts failed (ball rode on top of core, nothing to lift). Settled on wide bore.
+
+**Matched pair — modular stackable segments:**
+
+| Part | Generator | Key dims | Material | Status |
+|---|---|---|---|---|
+| Tube segment | `generate_tube_segment_final.py` | ID 102 mm (4.02 in), OD 108 mm, collar OD 114 mm, 160 mm tall per segment, 10 mm spigot/socket joint, hexagonal honeycomb perf wall, 820 holes @ 6 mm AF, 2 mm webs | PETG | Designed ✓ |
+| Screw segment | `generate_screw_segment.py` | OD 97.2 mm (3.83 in), core 12 mm, pitch 50 mm, 3 turns per segment (150 mm), M8 bore (8.5 mm), peg+hole clocking | PETG | Designed ✓ |
+
+**Fit checks (verified):**
+- Flight-to-wall clearance: 2.4 mm per side — flight clears mesh holes, no rubbing
+- Spigot-to-socket: 0.4 mm slip fit per side — slides together, locates coaxially
+- Bore: flush 102 mm ID above the socket, no internal step
+
+**Stack heights** (10 mm spigot buries per joint):
+- 1 segment: 6.30 in (160 mm)
+- 2 segments: 12.20 in (310 mm)
+- 3 segments: 18.11 in (460 mm)
+- N segments: N × 5.90 in + 0.39 in
+
+**Print settings:** tube standing, 5 mm brim, no support. Screw standing, normal supports (not tree) under flight. Both PETG.
+
+**Open items on auger:**
+- Bottom-most screw segment needs scooped lead-in (currently flush-ended); generate `screw_segment_bottom.stl` variant before final assembly.
+- Infeed and exit segments need side ports cut once hopper/trough interface is committed.
+- Rod end-cap bearings (608ZZ) mount outside the ball path at the dead ends of the tube stack (not spider-through-bore — ball cannot pass a center hub).
+- Commit tube stack height once trough-to-hopper span is measured; height is a print-count (N segments), not a blocking decision.
+
+**Generators to commit to `docs/3d-models/`:**
+- `generate_tube_segment_final.py`
+- `generate_tube_segment_hex.py`
+- `generate_screw_segment.py`
+- `generate_auger_wide3.py` (single bench-test screw, OD 97.2, 1 turn, scooped lead-in — **this is the proven lifter**)`.)
 - **Cosmetic shell** — face-front, hair/back, red headband (seam cover), polo collar, torso front/back,
   base/pedestal. → Blender, then boolean the mount features on.
 - **Camera eye mounts** (ELP bar behind the eye sockets) and the **hopper→escapement funnel + boot**.
