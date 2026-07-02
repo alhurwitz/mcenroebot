@@ -155,7 +155,7 @@ class ThrottleMap(BaseModel):
     ----------
     rpm_at_full_throttle : float
         Measured wheel rpm at throttle 1.0. Must be > 0.
-    top_floor, bottom_floor : float
+    front_floor, back_floor : float
         Per-wheel ESC startup deadband in [0, 1): the lowest throttle at which
         that wheel actually spins under load. The two wheels rarely match (a
         measured pair was top 0.08 / bottom 0.05), so each carries its own
@@ -168,8 +168,8 @@ class ThrottleMap(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     rpm_at_full_throttle: float
-    top_floor: float = 0.0
-    bottom_floor: float = 0.0
+    front_floor: float = 0.0
+    back_floor: float = 0.0
 
     @field_validator("rpm_at_full_throttle")
     @classmethod
@@ -178,7 +178,7 @@ class ThrottleMap(BaseModel):
             raise ValueError(f"rpm_at_full_throttle={value} must be > 0")
         return value
 
-    @field_validator("top_floor", "bottom_floor")
+    @field_validator("front_floor", "back_floor")
     @classmethod
     def _check_floor(cls, value: float, info: ValidationInfo) -> float:
         if not (0.0 <= value < 1.0):
@@ -190,7 +190,7 @@ class ThrottleMap(BaseModel):
 
         ``rpm <= 0`` returns 0.0 (wheel off). Any positive rpm is mapped into
         ``[floor, 1]`` so it clears the ESC startup deadband. Prefer the
-        per-wheel helpers :meth:`throttle_for_top` / :meth:`throttle_for_bottom`,
+        per-wheel helpers :meth:`throttle_for_front` / :meth:`throttle_for_back`,
         which supply the matching floor; this method takes an explicit floor
         (default 0.0 = plain linear) for generic use.
         """
@@ -200,10 +200,10 @@ class ThrottleMap(BaseModel):
         throttle = floor + frac * (1.0 - floor)
         return min(1.0, max(0.0, throttle))
 
-    def throttle_for_top(self, rpm: float) -> float:
-        """Throttle for the top wheel, using ``top_floor``."""
-        return self.throttle_for(rpm, self.top_floor)
+    def throttle_for_front(self, rpm: float) -> float:
+        """Throttle for the top wheel, using ``front_floor``."""
+        return self.throttle_for(rpm, self.front_floor)
 
-    def throttle_for_bottom(self, rpm: float) -> float:
-        """Throttle for the bottom wheel, using ``bottom_floor``."""
-        return self.throttle_for(rpm, self.bottom_floor)
+    def throttle_for_back(self, rpm: float) -> float:
+        """Throttle for the bottom wheel, using ``back_floor``."""
+        return self.throttle_for(rpm, self.back_floor)

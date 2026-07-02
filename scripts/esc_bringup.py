@@ -35,10 +35,10 @@ from adafruit_servokit import ServoKit
 # Channels come from the shared map; fall back to literals so a broken package
 # import can never block a bench session.
 try:
-    from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, WHEEL_BOTTOM, WHEEL_TOP
+    from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, WHEEL_BACK, WHEEL_FRONT
 
-    TOP_CHANNEL = WHEEL_TOP
-    BOTTOM_CHANNEL = WHEEL_BOTTOM
+    TOP_CHANNEL = WHEEL_FRONT
+    BOTTOM_CHANNEL = WHEEL_BACK
     MIN_US = ESC_MIN_US
     MAX_US = ESC_MAX_US
 except Exception:

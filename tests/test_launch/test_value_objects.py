@@ -127,40 +127,40 @@ class TestThrottleMap:
 
     def test_floors_default_to_zero(self) -> None:
         tm = ThrottleMap(rpm_at_full_throttle=10000.0)
-        assert tm.top_floor == 0.0
-        assert tm.bottom_floor == 0.0
+        assert tm.front_floor == 0.0
+        assert tm.back_floor == 0.0
         # With zero floors the per-wheel helpers are plain linear.
-        assert tm.throttle_for_top(5000.0) == pytest.approx(0.5)
-        assert tm.throttle_for_bottom(5000.0) == pytest.approx(0.5)
+        assert tm.throttle_for_front(5000.0) == pytest.approx(0.5)
+        assert tm.throttle_for_back(5000.0) == pytest.approx(0.5)
 
     def test_per_wheel_floors_remap_into_live_band(self) -> None:
-        tm = ThrottleMap(rpm_at_full_throttle=10000.0, top_floor=0.08, bottom_floor=0.05)
+        tm = ThrottleMap(rpm_at_full_throttle=10000.0, front_floor=0.08, back_floor=0.05)
         # rpm>0 is remapped into [floor, 1]: floor + frac*(1-floor).
-        assert tm.throttle_for_top(5000.0) == pytest.approx(0.08 + 0.5 * 0.92)
-        assert tm.throttle_for_bottom(5000.0) == pytest.approx(0.05 + 0.5 * 0.95)
+        assert tm.throttle_for_front(5000.0) == pytest.approx(0.08 + 0.5 * 0.92)
+        assert tm.throttle_for_back(5000.0) == pytest.approx(0.05 + 0.5 * 0.95)
         # Same rpm, different wheel -> different throttle (the whole point).
-        assert tm.throttle_for_top(5000.0) != tm.throttle_for_bottom(5000.0)
+        assert tm.throttle_for_front(5000.0) != tm.throttle_for_back(5000.0)
 
     def test_full_rpm_maps_to_one_regardless_of_floor(self) -> None:
-        tm = ThrottleMap(rpm_at_full_throttle=10000.0, top_floor=0.08, bottom_floor=0.05)
-        assert tm.throttle_for_top(10000.0) == pytest.approx(1.0)
-        assert tm.throttle_for_bottom(10000.0) == pytest.approx(1.0)
+        tm = ThrottleMap(rpm_at_full_throttle=10000.0, front_floor=0.08, back_floor=0.05)
+        assert tm.throttle_for_front(10000.0) == pytest.approx(1.0)
+        assert tm.throttle_for_back(10000.0) == pytest.approx(1.0)
 
     def test_zero_rpm_is_off_even_with_floor(self) -> None:
-        tm = ThrottleMap(rpm_at_full_throttle=10000.0, top_floor=0.08, bottom_floor=0.05)
-        assert tm.throttle_for_top(0.0) == 0.0
-        assert tm.throttle_for_bottom(0.0) == 0.0
+        tm = ThrottleMap(rpm_at_full_throttle=10000.0, front_floor=0.08, back_floor=0.05)
+        assert tm.throttle_for_front(0.0) == 0.0
+        assert tm.throttle_for_back(0.0) == 0.0
 
     @pytest.mark.parametrize(
         "field,value",
-        [("top_floor", -0.1), ("top_floor", 1.0), ("bottom_floor", -0.01), ("bottom_floor", 1.5)],
+        [("front_floor", -0.1), ("front_floor", 1.0), ("back_floor", -0.01), ("back_floor", 1.5)],
     )
     def test_floor_out_of_range_raises(self, field: str, value: float) -> None:
         with pytest.raises(ValidationError, match=field):
             ThrottleMap(rpm_at_full_throttle=10000.0, **{field: value})
 
     def test_floor_boundaries(self) -> None:
-        ThrottleMap(rpm_at_full_throttle=10000.0, top_floor=0.0, bottom_floor=0.999)
+        ThrottleMap(rpm_at_full_throttle=10000.0, front_floor=0.0, back_floor=0.999)
 
     def test_non_positive_full_throttle_raises(self) -> None:
         with pytest.raises(ValidationError, match=r"rpm_at_full_throttle"):

@@ -41,9 +41,9 @@ from adafruit_servokit import ServoKit
 # Channels/pulse range from the shared map; fall back to literals so a broken
 # package import can never block a bench session.
 try:
-    from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, WHEEL_TOP
+    from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, WHEEL_FRONT
 
-    DEFAULT_CHANNEL = WHEEL_TOP
+    DEFAULT_CHANNEL = WHEEL_FRONT
     MIN_US = ESC_MIN_US
     MAX_US = ESC_MAX_US
 except Exception:

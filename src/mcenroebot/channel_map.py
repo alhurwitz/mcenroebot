@@ -7,8 +7,8 @@ PCA9685 @ 0x40 (50 Hz — shared by all servos AND the wheel ESCs)
     ch0  PAN          MG996R positional servo      (aim, yaw about Z)
     ch1  TILT         MG996R positional servo      (aim, ballistic elevation)
     ch2  HEAD_ROLL    MG996R positional servo      (launch head, spin axis)
-    ch3  WHEEL_TOP    A2212 + 30A ESC              (launch, continuous_servo)
-    ch4  WHEEL_BOTTOM A2212 + 30A ESC              (launch, continuous_servo)
+    ch3  WHEEL_FRONT    A2212 + 30A ESC              (launch, continuous_servo)
+    ch4  WHEEL_BACK A2212 + 30A ESC              (launch, continuous_servo)
     ch5  ESCAPEMENT   continuous-rotation servo    (feed, single-ball release)
 
 Pi GPIO (BCM) — everything that can't share the 50 Hz board
@@ -36,8 +36,8 @@ __all__ = [
     "PCA9685_ADDRESS",
     "PCA9685_FREQ_HZ",
     "TILT",
-    "WHEEL_BOTTOM",
-    "WHEEL_TOP",
+    "WHEEL_BACK",
+    "WHEEL_FRONT",
 ]
 
 # --- PCA9685 board (servos + ESCs share this one at 50 Hz) ---
@@ -50,8 +50,8 @@ TILT = 1
 HEAD_ROLL = 2
 
 # Launch-wheel ESCs (.throttle via continuous_servo, 0-1)
-WHEEL_TOP = 3
-WHEEL_BOTTOM = 4
+WHEEL_FRONT = 3
+WHEEL_BACK = 4
 
 # Escapement feeder (continuous-rotation servo, .throttle -1..1)
 ESCAPEMENT = 5

@@ -1,6 +1,7 @@
 # .pre-commit-config.yaml
-# Run: uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Run: uv run pre-commit install  (hook types below are installed automatically)
 # Update hooks: uv run pre-commit autoupdate
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
 default_language_version:
   python: python3.11
 
@@ -20,9 +21,13 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.14
     hooks:
-      - id: ruff
+      - id: ruff-check
+        # Like mypy below, skip one-off docs scripts (STL generators etc.) —
+        # they aren't project code; lint is scoped to src/ (see CLAUDE.md).
+        exclude: ^docs/
         args: [--fix]
       - id: ruff-format
+        exclude: ^docs/
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v2.1.0
@@ -71,3 +76,4 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
+        stages: [pre-push]
