@@ -154,8 +154,14 @@ class ThrottleMap(BaseModel):
     Attributes
     ----------
     rpm_at_full_throttle : float
-        Measured wheel rpm at throttle 1.0. Must be > 0.
-    front_floor, back_floor : float
+        Measured wheel rpm at throttle 1.0. Must be > 0. Shared default for
+        both wheels when the motors match.
+    top_rpm_at_full, bottom_rpm_at_full : float | None
+        Optional per-wheel overrides of ``rpm_at_full_throttle`` for a
+        mixed-motor pair (e.g. A2212 1400KV top / 1000KV bottom, whose
+        full-throttle rpm differ by ~40%). ``None`` falls back to the shared
+        value. Must be > 0 when set.
+    top_floor, bottom_floor : float
         Per-wheel ESC startup deadband in [0, 1): the lowest throttle at which
         that wheel actually spins under load. The two wheels rarely match (a
         measured pair was top 0.08 / bottom 0.05), so each carries its own
@@ -168,8 +174,10 @@ class ThrottleMap(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     rpm_at_full_throttle: float
-    front_floor: float = 0.0
-    back_floor: float = 0.0
+    top_rpm_at_full: float | None = None
+    bottom_rpm_at_full: float | None = None
+    top_floor: float = 0.0
+    bottom_floor: float = 0.0
 
     @field_validator("rpm_at_full_throttle")
     @classmethod
@@ -178,32 +186,42 @@ class ThrottleMap(BaseModel):
             raise ValueError(f"rpm_at_full_throttle={value} must be > 0")
         return value
 
-    @field_validator("front_floor", "back_floor")
+    @field_validator("top_rpm_at_full", "bottom_rpm_at_full")
+    @classmethod
+    def _check_per_wheel_full(cls, value: float | None, info: ValidationInfo) -> float | None:
+        if value is not None and value <= 0.0:
+            raise ValueError(f"{info.field_name}={value} must be > 0 when set")
+        return value
+
+    @field_validator("top_floor", "bottom_floor")
     @classmethod
     def _check_floor(cls, value: float, info: ValidationInfo) -> float:
         if not (0.0 <= value < 1.0):
             raise ValueError(f"{info.field_name}={value} must be in [0, 1)")
         return value
 
-    def throttle_for(self, rpm: float, floor: float = 0.0) -> float:
+    def throttle_for(
+        self, rpm: float, floor: float = 0.0, rpm_at_full: float | None = None
+    ) -> float:
         """Map a wheel rpm to an ESC throttle in [0, 1], remapped into ``[floor, 1]``.
 
         ``rpm <= 0`` returns 0.0 (wheel off). Any positive rpm is mapped into
         ``[floor, 1]`` so it clears the ESC startup deadband. Prefer the
-        per-wheel helpers :meth:`throttle_for_front` / :meth:`throttle_for_back`,
-        which supply the matching floor; this method takes an explicit floor
-        (default 0.0 = plain linear) for generic use.
+        per-wheel helpers :meth:`throttle_for_top` / :meth:`throttle_for_bottom`,
+        which supply the matching floor and per-wheel full-throttle rpm; this
+        method takes an explicit floor (default 0.0 = plain linear) and an
+        optional ``rpm_at_full`` override for generic use.
         """
         if rpm <= 0.0:
             return 0.0
-        frac = rpm / self.rpm_at_full_throttle
+        frac = rpm / (rpm_at_full if rpm_at_full is not None else self.rpm_at_full_throttle)
         throttle = floor + frac * (1.0 - floor)
         return min(1.0, max(0.0, throttle))
 
-    def throttle_for_front(self, rpm: float) -> float:
-        """Throttle for the top wheel, using ``front_floor``."""
-        return self.throttle_for(rpm, self.front_floor)
+    def throttle_for_top(self, rpm: float) -> float:
+        """Throttle for the top wheel, using ``top_floor`` and ``top_rpm_at_full``."""
+        return self.throttle_for(rpm, self.top_floor, self.top_rpm_at_full)
 
-    def throttle_for_back(self, rpm: float) -> float:
-        """Throttle for the bottom wheel, using ``back_floor``."""
-        return self.throttle_for(rpm, self.back_floor)
+    def throttle_for_bottom(self, rpm: float) -> float:
+        """Throttle for the bottom wheel, using ``bottom_floor`` and ``bottom_rpm_at_full``."""
+        return self.throttle_for(rpm, self.bottom_floor, self.bottom_rpm_at_full)

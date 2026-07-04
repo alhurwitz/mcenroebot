@@ -1,7 +1,16 @@
 # McEnroe V4 Feeder — Design Spec
 
+> **DEPRECATED (2026-07-04).** This spec describes the abandoned
+> escapement-disc + auger feed design. The build moved to a rocking-arm feed
+> unit driven by an MG996R positional servo (`FEED_SERVO`, PCA9685 ch5) plus a
+> vertical-drop two-wheel launcher. Canonical feed/launch spec:
+> `docs/feed_launch_reconciled.md` (note: not yet committed to the repo — the
+> launcher geometry SSOT is currently captured in
+> `docs/3d-models/launcher_bracket_v3/generate_parts.py` and `NEXT_STEPS.md`).
+> The launch-math sections (§ShotSpec/WheelCommand/ThrottleMap) remain accurate.
+
 Date: 2026-06-23
-Status: Approved (brainstorming → implementation)
+Status: Superseded (was: Approved, brainstorming → implementation)
 Branch: `feature/v4-feeder` (cut from `develop`)
 
 This spec reconciles [`docs/V4_PLAN.md`](../../V4_PLAN.md) (mechanism source of truth) and

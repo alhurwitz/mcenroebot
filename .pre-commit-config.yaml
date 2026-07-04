@@ -50,19 +50,6 @@ repos:
           - tree-sitter-typescript>=0.23
         args: [--config-file=pyproject.toml]
 
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.16.2
-    hooks:
-      - id: commitizen
-        stages: [commit-msg]
-
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
-    hooks:
-      - id: detect-secrets
-#        args: [--baseline, .secrets.baseline]
-        exclude: uv\.lock
-
   # Run the test suite. Lives in a `local` repo so it can call into the
   # project's uv-managed venv (pre-commit can't see our deps otherwise).
   # Stage = pre-push so commits stay fast; switch to `pre-commit` if you

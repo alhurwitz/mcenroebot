@@ -145,8 +145,8 @@ class LaunchController:
         top/bottom rpm pair lands in each wheel's live throttle band.
         """
         return (
-            throttle_map.throttle_for_front(command.top_rpm),
-            throttle_map.throttle_for_back(command.bottom_rpm),
+            throttle_map.throttle_for_top(command.top_rpm),
+            throttle_map.throttle_for_bottom(command.bottom_rpm),
         )
 
     def _rpm(self, u_surface: float) -> float:

@@ -17,7 +17,7 @@ McEnroe is a hobby ping-pong robot. **The current direction is V4 — the feeder
 | 2 | head-roll servo | `drivers/servo` |
 | 3 | top wheel ESC | `drivers/bldc` |
 | 4 | bottom wheel ESC | `drivers/bldc` |
-| 5 | escapement CR servo | `drivers/feeder` |
+| 5 | feed servo (MG996R positional, was escapement CR) | `drivers/feeder` |
 | 6 | auger MOSFET PWM | `drivers/lift` |
 
 The hopper-full endstop (optional) is on a GPIO pin via `drivers/lift.GpioHopperSensor`, not the PCA9685. Single Logitech webcam at `/dev/video0` is used only for the optional Wave-6 player-placement vision (no 3D ball tracking).

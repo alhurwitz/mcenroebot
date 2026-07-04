@@ -37,7 +37,7 @@ powering on (spec §9). Planned map (also in `CLAUDE.md`):
 | 2 | head-roll servo | `drivers/servo` |
 | 3 | top wheel ESC | `drivers/bldc` |
 | 4 | bottom wheel ESC | `drivers/bldc` |
-| 5 | escapement CR servo | `drivers/feeder` |
+| 5 | feed servo (MG996R positional, was escapement CR) | `drivers/feeder` |
 | 6 | auger MOSFET PWM | `drivers/lift` |
 
 - [ ] Hopper-full endstop (optional) on a BCM GPIO pin → `drivers/lift.GpioHopperSensor`.
