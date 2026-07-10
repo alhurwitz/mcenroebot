@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from typing import Any
 
 import numpy as np
 
@@ -61,7 +62,24 @@ def measure_rpm(samples: np.ndarray, fps: float, stripes: int) -> tuple[float, f
     return 60.0 * peak_hz / stripes, strength
 
 
-def _open_camera(device: int, width: int, height: int, fps: int):
+def _open_camera(device: int, width: int, height: int, fps: int) -> tuple[Any, Any]:
+    """
+    Opens and configures a camera device for capturing video.
+
+    This function initializes a camera using OpenCV and sets specific
+    configuration parameters including resolution and frames per second
+    (fps). It raises a system exit if OpenCV is not installed or the
+    camera device cannot be opened.
+
+    Parameters:
+    device (int): The ID of the camera device to open.
+    width (int): The desired width of the video frame.
+    height (int): The desired height of the video frame.
+    fps (int): The desired frame rate for the video capture.
+
+    Returns:
+        tuple: A tuple containing the OpenCV module and the video capture object.
+    """
     try:
         import cv2
     except ImportError:
