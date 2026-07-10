@@ -20,6 +20,9 @@ Live keys:
     + / -         base throttle +-0.01 (all wheels rescale)
     ] / [         spin differential +-0.01
     f             fire one ball (feed servo LOAD->DISCH->LOAD)
+    d             FLOOR HUNT: ramp each wheel alone from zero; press any
+                  key the moment it spins (x = skip wheel). Prints each
+                  wheel's spin-up floor AT TODAY'S BATTERY CHARGE.
     space         E-STOP: all wheels to zero, feed to LOAD, exit
     q             quit gracefully
 
@@ -32,6 +35,12 @@ bottom ESC = WHEEL_TRI_BOTTOM = 6, feed servo = 5.
 NEW-ESC NOTE: if the fresh bottom ESC won't arm (endless beeping), it may
 need one-time throttle-range calibration — do that per its manual before
 this test, or it will sit silent while the pair spins.
+
+DEADBAND NOTE (bench, 2026-07-10): these ESCs are open-loop — throttle is
+just duty cycle, so the spin-up floor AND rpm-per-throttle scale with pack
+voltage. The floor drifts with battery charge (and creeps up as the pack
+sags mid-session). Re-run the 'd' floor hunt whenever the battery changes,
+and feed the numbers into ThrottleMap's per-wheel floors.
 
 SPEED NOTE (bench, 2026-07): even ONE wheel at 20% throttle fired "really
 fast" — with three wheels gripping, the useful window is roughly 0.10-0.20,
@@ -84,6 +93,10 @@ DISCH_ANGLE: Final[float] = 175.0
 FEED_DWELL: Final[float] = 0.65
 SLICE: Final[float] = 0.05
 STEP: Final[float] = 0.01  # fine steps — the whole useful range is ~0.09-0.20
+FLOOR_START: Final[float] = 0.04  # floor hunt: ramp start
+FLOOR_STEP: Final[float] = 0.005
+FLOOR_DWELL: Final[float] = 0.6  # s per step, waiting for your keypress
+FLOOR_MAX: Final[float] = 0.25
 
 PRESETS: Final[dict[str, str]] = {
     "1": "FLAT",
@@ -176,6 +189,55 @@ def fire_one(rig: Rig) -> None:
     time.sleep(FEED_DWELL)
 
 
+def floor_hunt(rig: Rig) -> dict[str, float]:
+    """Find each wheel's spin-up throttle floor at the current battery charge.
+
+    Ramps ONE wheel at a time (others stopped) from FLOOR_START in FLOOR_STEP
+    increments, dwelling FLOOR_DWELL at each. Press any key the moment the
+    wheel starts to spin; x skips that wheel. Caller is already in raw mode,
+    hence the explicit \r\n line endings.
+    """
+    names = ("A", "B", "BOT")
+    floors: dict[str, float] = {}
+    print("\r\nFLOOR HUNT — watch each wheel: any key = spinning, x = skip", end="\r\n")
+    for i, name in enumerate(names):
+        if rig.dry_run:
+            floors[name] = FLOOR_START + 10 * FLOOR_STEP  # simulated
+            print(f"[dry] {name} floor {floors[name]:.3f}", end="\r\n")
+            continue
+        vals = [0.0, 0.0, 0.0]
+        rig.wheels(*vals)
+        time.sleep(1.0)  # let it fully stop
+        throttle = FLOOR_START
+        while throttle <= FLOOR_MAX:
+            vals[i] = throttle
+            rig.wheels(*vals)
+            print(f"\r{name}: {throttle:.3f}  ", end="", flush=True)
+            deadline = time.monotonic() + FLOOR_DWELL
+            key = None
+            while time.monotonic() < deadline:
+                key = poll_key()
+                if key:
+                    break
+                time.sleep(0.02)
+            if key == "x":
+                break
+            if key:
+                floors[name] = throttle
+                break
+            throttle = round(throttle + FLOOR_STEP, 3)
+        vals[i] = 0.0
+        rig.wheels(*vals)
+        note = f"{name} floor {floors[name]:.3f}" if name in floors else f"{name} skipped"
+        print(f"\r{note}            ", end="\r\n")
+        time.sleep(0.5)
+    if floors:
+        summary = "  ".join(f"{k}={v:.3f}" for k, v in floors.items())
+        print(f"floors @ today's charge: {summary}", end="\r\n")
+        print("(feed these into ThrottleMap per-wheel floors)", end="\r\n")
+    return floors
+
+
 def status(
     preset: str, base: float, diff: float, thr: tuple[float, float, float], fired: int
 ) -> None:
@@ -211,7 +273,10 @@ def main() -> None:
     print(f"Spinning up FLAT at {base:.2f}...")
     rig.wheels(*thr)
     time.sleep(SPINUP_SECONDS)
-    print("Keys: 1=flat 2=top 3=back 4/5=side +/-=throttle [/]=diff f=fire space=E-STOP q=quit")
+    print(
+        "Keys: 1=flat 2=top 3=back 4/5=side +/-=throttle [/]=diff "
+        "f=fire d=floorhunt space=E-STOP q=quit"
+    )
 
     fired = 0
     fd = sys.stdin.fileno()
@@ -240,6 +305,9 @@ def main() -> None:
                 fire_one(rig)
                 fired += 1
                 dirty = True
+            elif key == "d":
+                floor_hunt(rig)
+                dirty = True  # dirty path spins the preset back up
             if dirty:
                 thr = mix(preset, base, diff)
                 rig.wheels(*thr)
