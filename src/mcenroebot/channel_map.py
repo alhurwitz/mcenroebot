@@ -10,6 +10,7 @@ PCA9685 @ 0x40 (50 Hz — shared by all servos AND the wheel ESCs)
     ch3  WHEEL_TOP     A2212 + 30A ESC              (launch, continuous_servo)
     ch4  WHEEL_BOTTOM  A2212 + 30A ESC              (launch, continuous_servo)
     ch5  FEED_SERVO   MG996R positional servo      (feed airlock, LOAD/DISCH rock)
+    ch6  WHEEL_TRI_BOTTOM  A2212 + 30A ESC         (launch, continuous_servo; v4 tri)
 
 Pi GPIO (BCM) — everything that can't share the 50 Hz board
     AUGER_PWM_GPIO    hardware-PWM pin -> L298N ENA (auger speed). The auger
@@ -40,6 +41,7 @@ __all__ = [
     "TILT",
     "WHEEL_BOTTOM",
     "WHEEL_TOP",
+    "WHEEL_TRI_BOTTOM",
 ]
 
 # --- PCA9685 board (servos + ESCs share this one at 50 Hz) ---
@@ -55,6 +57,13 @@ HEAD_ROLL = 2
 # stacked vertically: ball drops into the nip, top/bottom rpm split sets spin.
 WHEEL_TOP = 3
 WHEEL_BOTTOM = 4
+
+# Third launch wheel for the v4 tri bracket (bottom + upper pair at 120 deg,
+# launcher_bracket_v4_tri, ESC in hand 2026-07-10). In the tri config the two
+# original ESC channels (WHEEL_TOP/WHEEL_BOTTOM above — names kept, do NOT
+# rename) drive the UPPER PAIR, and this channel drives the wheel under the
+# ball path. Upper-pair-faster = topspin; tri-bottom-faster = backspin.
+WHEEL_TRI_BOTTOM = 6
 
 # Feed airlock metering servo (MG996R positional, .angle 0-180).
 # Replaced the abandoned continuous-rotation escapement (2026-07-04): it holds
