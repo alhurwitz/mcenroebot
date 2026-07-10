@@ -4,17 +4,20 @@
 Arms all three launcher ESCs (upper pair ch 3/4 + bottom ch 6) and shows a
 full-screen dashboard readable from across a rattling bench: big digit
 readouts for base/diff/balls, per-wheel throttle bars with each wheel's
-measured floor marked in red, stall warnings, and footer key hints.
+measured floor marked in red, per-wheel trim, stall warnings, and footer
+key hints.
 
-Needs the ``textual`` package: run ``uv add textual`` once, then on the Pi
-(with the ``pi`` extra: ``uv sync --extra pi``):
+Needs the ``textual`` package (``uv add textual``), then on the Pi (with
+the ``pi`` extra: ``uv sync --extra pi``):
 
     uv run python scripts/triwheel_spin_test.py --throttle 0.12 --diff 0.03
 
 Live keys:
     1 / 2 / 3     preset: FLAT / TOPSPIN / BACKSPIN
     4 / 5         preset: SIDESPIN A-fast / B-fast (upper pair differential)
-    + / -         base throttle +-0.01 (all wheels rescale)
+    up / down     select what +/- adjusts: ALL (base) or one wheel (trim)
+    + / -         adjust selection by 0.01 (ALL = base; wheel = its trim)
+    z             zero all per-wheel trims
     ] / [         spin differential +-0.01
     f             fire one ball (feed servo LOAD->DISCH->LOAD)
     d             FLOOR HUNT: ramp each wheel alone from zero; press any
@@ -22,6 +25,17 @@ Live keys:
                   red ticks on the bars — AT TODAY'S BATTERY CHARGE.
     space         E-STOP: all wheels to zero, feed to LOAD, exit
     q             quit gracefully
+
+Per-wheel control: each wheel's throttle = preset mix + that wheel's trim.
+Select a wheel with up/down (▸ marks it) and nudge it with +/-. Trims
+persist across preset changes — use them to balance mismatched wheels/ESCs.
+
+SHUTDOWN: on quit/E-STOP all wheels are commanded to zero throttle, held
+briefly so the ESCs latch it, then the PWM signal is cut entirely so any
+ESC whose calibrated minimum sits below 1000us (seen on ch4: kept spinning
+at "zero") failsafes to off. If an ESC beeps after exit, that's the
+missing-signal complaint — it's stopped. Consider recalibrating that ESC's
+throttle range so 1000us is a true stop.
 
 Channel map (src/mcenroebot/channel_map.py is SSOT): pan=0, tilt=1,
 head-roll=2, upper-pair ESCs 3/4 (SSOT names WHEEL_TOP/WHEEL_BOTTOM —
@@ -48,6 +62,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import time
 from typing import Any, ClassVar, Final
 
 from rich.text import Text
@@ -84,9 +99,11 @@ ESC_MAX_US: Final[int] = 2000
 ARM_SECONDS = 3.0  # not Final: tests shrink these
 SPINUP_SECONDS = 2.5
 FEED_DWELL = 0.65
+STOP_LATCH_SECONDS = 0.4  # hold zero throttle before cutting the PWM signal
 LOAD_ANGLE: Final[float] = 70.0  # v3 ring arm (2026-07-04)
 DISCH_ANGLE: Final[float] = 175.0
 STEP: Final[float] = 0.01  # fine steps — the whole useful range is ~0.05-0.20
+TRIM_LIMIT: Final[float] = 0.05
 FLOOR_START: Final[float] = 0.03  # floor hunt: ramp start
 FLOOR_STEP: Final[float] = 0.005
 FLOOR_DWELL: Final[float] = 0.6  # s per step, waiting for your keypress
@@ -95,6 +112,7 @@ BAR_VMAX: Final[float] = 0.30  # bar full-scale (top of the useful band)
 BAR_WIDTH: Final[int] = 50
 
 WHEEL_NAMES: Final[tuple[str, str, str]] = ("A", "B", "BOT")
+TARGETS: Final[tuple[str, ...]] = ("ALL", *WHEEL_NAMES)
 
 PRESETS: Final[dict[str, str]] = {
     "1": "FLAT",
@@ -157,21 +175,37 @@ class Rig:
         for esc, v in zip(self._escs, vals, strict=True):
             esc.throttle = -1.0 + 2.0 * v
 
+    def wheels_signal_off(self) -> None:
+        """Cut the PWM signal on all wheel channels (ESC failsafe = motor off).
+
+        A plain zero-throttle command is 1000us, which is NOT a guaranteed
+        stop on an ESC whose calibrated minimum sits lower (ch4 kept
+        spinning). No signal at all is an unambiguous stop on these ESCs.
+        """
+        if self.dry_run:
+            return
+        for esc in self._escs:
+            esc.throttle = None  # adafruit_motor: None -> duty 0, no pulses
+
     def feed(self, angle: float) -> None:
         if self.dry_run:
             return
         self._feed.angle = _clamp(angle, 0.0, 180.0)
 
 
-def _bar_text(name: str, value: float, floor: float | None) -> Text:
-    """One wheel row: name, value, bar with red floor tick; red if stalled."""
+def _bar_text(name: str, value: float, floor: float | None, trim: float, selected: bool) -> Text:
+    """One wheel row: marker, name, value, trim, bar with red floor tick."""
     stalled = floor is not None and 0.0 < value < floor
     fill = round(_clamp(value / BAR_VMAX, 0.0, 1.0) * BAR_WIDTH)
     floor_pos = None
     if floor is not None:
         floor_pos = round(_clamp(floor / BAR_VMAX, 0.0, 1.0) * (BAR_WIDTH - 1))
     fill_style = "bold red" if stalled else "bold green"
-    text = Text(f"{name:<4}{value:.3f} ", style="bold")
+    marker = "▸" if selected else " "
+    head_style = "bold yellow" if selected else "bold"
+    text = Text(f"{marker}{name:<4}{value:.3f} ", style=head_style)
+    trim_style = "yellow" if trim else "grey37"
+    text.append(f"{trim:+.3f}  ", trim_style)
     for i in range(BAR_WIDTH):
         if i == floor_pos:
             text.append("▎", "bold red")
@@ -195,6 +229,7 @@ class SpinTestApp(App[int]):
     #readouts Vertical { width: 18; }
     #readouts Label { color: $text-muted; }
     #preset { text-style: bold reverse; padding: 0 1; width: auto; }
+    #target { padding: 0 1; color: $text-muted; }
     .bar { height: 1; padding: 0 1; }
     #floors { padding: 0 1; color: $text-muted; }
     #message { padding: 1 1 0 1; color: $warning; text-style: bold; }
@@ -206,6 +241,9 @@ class SpinTestApp(App[int]):
         Binding("3", "preset('3')", "backspin"),
         Binding("4", "preset('4')", "sideA", show=False),
         Binding("5", "preset('5')", "sideB", show=False),
+        Binding("up", "select(-1)", "select", show=False),
+        Binding("down", "select(1)", "select"),
+        Binding("z", "zero_trims", "zero trims", show=False),
         Binding("f", "fire", "fire"),
         Binding("d", "floor_hunt", "floor hunt"),
         Binding("space", "estop", "E-STOP"),
@@ -218,10 +256,13 @@ class SpinTestApp(App[int]):
         self.base = _clamp(base, 0.0, 1.0)
         self.diff = _clamp(diff, 0.0, 0.3)
         self.preset = "FLAT"
+        self.trims: dict[str, float] = {name: 0.0 for name in WHEEL_NAMES}
+        self.target_idx = 0  # index into TARGETS: ALL / A / B / BOT
         self.floors: dict[str, float] = {}
         self.fired = 0
         self.armed = False
         self.hunting = False
+        self._stopped = False
         self._hunt_keys: asyncio.Queue[str] = asyncio.Queue()
         self._thr: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
@@ -243,6 +284,7 @@ class SpinTestApp(App[int]):
             with Vertical():
                 yield Label("PRESET")
                 yield Static("FLAT", id="preset")
+        yield Static(id="target")
         for name in WHEEL_NAMES:
             yield Static(id=f"bar-{name}", classes="bar")
         yield Static(id="floors")
@@ -251,13 +293,28 @@ class SpinTestApp(App[int]):
 
     # --- state -> screen ----------------------------------------------------
 
+    @property
+    def target(self) -> str:
+        return TARGETS[self.target_idx]
+
     def _refresh(self) -> None:
         self.query_one("#base", Digits).update(f"{self.base:.3f}")
         self.query_one("#diff", Digits).update(f"{self.diff:.3f}")
         self.query_one("#balls", Digits).update(str(self.fired))
         self.query_one("#preset", Static).update(self.preset)
+        if self.target == "ALL":
+            target_line = "+/- adjusts: ALL wheels (base)   —   up/down to pick one wheel"
+        else:
+            target_line = f"+/- adjusts: wheel {self.target} trim   —   z zeroes trims"
+        self.query_one("#target", Static).update(target_line)
         for i, name in enumerate(WHEEL_NAMES):
-            bar = _bar_text(name, self._thr[i], self.floors.get(name))
+            bar = _bar_text(
+                name,
+                self._thr[i],
+                self.floors.get(name),
+                self.trims[name],
+                selected=self.target == name,
+            )
             self.query_one(f"#bar-{name}", Static).update(bar)
         if self.floors:
             floors = "floors @ this charge:  " + "   ".join(
@@ -271,14 +328,25 @@ class SpinTestApp(App[int]):
         self.query_one("#message", Static).update(text)
 
     def _apply(self) -> None:
-        """Recompute the mix, command the ESCs, redraw."""
-        self._thr = mix(self.preset, self.base, self.diff)
+        """Recompute preset mix + per-wheel trims, command the ESCs, redraw."""
+        mixed = mix(self.preset, self.base, self.diff)
+        self._thr = tuple(  # type: ignore[assignment]
+            _clamp(m + self.trims[name], 0.0, 1.0)
+            for m, name in zip(mixed, WHEEL_NAMES, strict=True)
+        )
         self.rig.wheels(*self._thr)
         self._refresh()
 
     def _rig_stop(self) -> None:
+        """Zero throttle, let the ESCs latch it, then cut the PWM signal."""
+        if self._stopped:
+            return
+        self._stopped = True
         self.rig.wheels(0.0, 0.0, 0.0)
         self.rig.feed(LOAD_ANGLE)
+        if not self.rig.dry_run:
+            time.sleep(STOP_LATCH_SECONDS)
+        self.rig.wheels_signal_off()
 
     # --- lifecycle ----------------------------------------------------------
 
@@ -311,22 +379,46 @@ class SpinTestApp(App[int]):
         # +/-/]/[ aren't clean binding names; match key name OR character
         ch = getattr(event, "character", None)
         if event.key in ("plus", "equals_sign") or ch in ("+", "="):
-            self._bump(base=STEP)
+            self._bump(STEP)
         elif event.key == "minus" or ch == "-":
-            self._bump(base=-STEP)
+            self._bump(-STEP)
         elif event.key == "right_square_bracket" or ch == "]":
-            self._bump(diff=STEP)
+            self._bump_diff(STEP)
         elif event.key == "left_square_bracket" or ch == "[":
-            self._bump(diff=-STEP)
+            self._bump_diff(-STEP)
 
-    def _bump(self, base: float = 0.0, diff: float = 0.0) -> None:
+    def _bump(self, delta: float) -> None:
+        """+/-: adjust base when ALL is selected, else the selected wheel's trim."""
         if not self.armed:
             return
-        self.base = _clamp(self.base + base, 0.0, 1.0)
-        self.diff = _clamp(self.diff + diff, 0.0, 0.3)
+        if self.target == "ALL":
+            self.base = _clamp(self.base + delta, 0.0, 1.0)
+        else:
+            self.trims[self.target] = _clamp(
+                self.trims[self.target] + delta, -TRIM_LIMIT, TRIM_LIMIT
+            )
+        self._apply()
+
+    def _bump_diff(self, delta: float) -> None:
+        if not self.armed:
+            return
+        self.diff = _clamp(self.diff + delta, 0.0, 0.3)
         self._apply()
 
     # --- actions --------------------------------------------------------------
+
+    def action_select(self, delta: int) -> None:
+        if self.hunting:
+            return
+        self.target_idx = (self.target_idx + delta) % len(TARGETS)
+        self._refresh()
+
+    def action_zero_trims(self) -> None:
+        if not self.armed or self.hunting:
+            return
+        self.trims = {name: 0.0 for name in WHEEL_NAMES}
+        self._message("trims zeroed")
+        self._apply()
 
     def action_preset(self, key: str) -> None:
         if not self.armed or self.hunting:
@@ -416,7 +508,7 @@ def main() -> None:
         fired = app.run()
     finally:
         app._rig_stop()  # belt and braces — idempotent
-    print(f"Done — {fired or 0} balls. All wheels stopped, feed at LOAD.")
+    print(f"Done — {fired or 0} balls. All wheels stopped (PWM signal cut), feed at LOAD.")
 
 
 if __name__ == "__main__":
