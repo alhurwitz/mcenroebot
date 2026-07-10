@@ -38,6 +38,7 @@ repos:
         exclude: ^docs/
         additional_dependencies:
           - pydantic>=2.6
+          - textual>=8.0
           - pydantic[mypy]
           - httpx>=0.27
           - anyio>=4.3
