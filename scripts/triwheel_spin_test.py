@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""TRI-WHEEL SPIN TEST — first all-three-wheels bring-up (2026-07-10).
+"""TRI-WHEEL SPIN TEST — full-screen bench console (curses).
 
-Arms all three launcher ESCs (upper pair ch 3/4 + NEW bottom ch 6), then
-lets you flip between spin presets and fire balls to see the spin for real.
-
-Spin convention (contact surfaces all move in the launch direction):
-    TOPSPIN  = upper pair FASTER than bottom  (top of ball driven forward)
-    BACKSPIN = bottom FASTER than upper pair
-    SIDESPIN = the two upper wheels differ (A vs B) — direction TBD on bench,
-               note which way preset 4 curves and label it in this docstring.
+Arms all three launcher ESCs (upper pair ch 3/4 + bottom ch 6) and shows a
+terminal dashboard readable from across the bench: per-wheel throttle bars
+(with each wheel's measured floor marked ``|``), preset, base/diff, and a
+message line. Same keys as before.
 
 Run ON THE PI (needs the ``pi`` extra: ``uv sync --extra pi``):
 
@@ -21,8 +17,8 @@ Live keys:
     ] / [         spin differential +-0.01
     f             fire one ball (feed servo LOAD->DISCH->LOAD)
     d             FLOOR HUNT: ramp each wheel alone from zero; press any
-                  key the moment it spins (x = skip wheel). Prints each
-                  wheel's spin-up floor AT TODAY'S BATTERY CHARGE.
+                  key the moment it spins (x = skip wheel). Floors show as
+                  ``|`` markers on the bars — AT TODAY'S BATTERY CHARGE.
     space         E-STOP: all wheels to zero, feed to LOAD, exit
     q             quit gracefully
 
@@ -32,33 +28,27 @@ the v3 stacked-pair names, kept per the 2026-07-04 no-rename decision;
 in the v4 tri bracket those two channels drive the UPPER PAIR), tri
 bottom ESC = WHEEL_TRI_BOTTOM = 6, feed servo = 5.
 
-NEW-ESC NOTE: if the fresh bottom ESC won't arm (endless beeping), it may
-need one-time throttle-range calibration — do that per its manual before
-this test, or it will sit silent while the pair spins.
-
 DEADBAND NOTE (bench, 2026-07-10): these ESCs are open-loop — throttle is
 just duty cycle, so the spin-up floor AND rpm-per-throttle scale with pack
 voltage. The floor drifts with battery charge (and creeps up as the pack
-sags mid-session). Re-run the 'd' floor hunt whenever the battery changes,
-and feed the numbers into ThrottleMap's per-wheel floors.
+sags mid-session). Re-run the 'd' floor hunt whenever the battery changes.
+First measured floors (2026-07-10): A=0.050 B=0.045 BOT=0.045.
 
 SPEED NOTE (bench, 2026-07): even ONE wheel at 20% throttle fired "really
-fast" — with three wheels gripping, the useful window is roughly 0.10-0.20,
-just above the ~9% ESC deadband. Below ~0.09 a wheel stops entirely, so at
-low base keep diff small or the slow wheel of a spin preset will stall.
+fast" — the useful window is roughly floor+0.02 to 0.20. A wheel commanded
+below its floor stops entirely, so at low base keep diff small or the slow
+wheel of a spin preset will stall.
 
 SAFETY: all three wheels spin the whole session; keep hands out of the nip.
-Pass --dry-run to rehearse off-hardware.
+Pass --dry-run to rehearse off-hardware (still needs a real terminal).
 """
 
 from __future__ import annotations
 
 import argparse
-import select
-import sys
-import termios
+import contextlib
+import curses
 import time
-import tty
 from typing import Any, Final
 
 try:  # single source of truth when running from the repo (uv run ...)
@@ -92,11 +82,15 @@ LOAD_ANGLE: Final[float] = 70.0  # v3 ring arm (2026-07-04)
 DISCH_ANGLE: Final[float] = 175.0
 FEED_DWELL: Final[float] = 0.65
 SLICE: Final[float] = 0.05
-STEP: Final[float] = 0.01  # fine steps — the whole useful range is ~0.09-0.20
-FLOOR_START: Final[float] = 0.04  # floor hunt: ramp start
+STEP: Final[float] = 0.01  # fine steps — the whole useful range is ~0.05-0.20
+FLOOR_START: Final[float] = 0.03  # floor hunt: ramp start
 FLOOR_STEP: Final[float] = 0.005
 FLOOR_DWELL: Final[float] = 0.6  # s per step, waiting for your keypress
 FLOOR_MAX: Final[float] = 0.25
+BAR_VMAX: Final[float] = 0.30  # bar full-scale (top of the useful band)
+BAR_WIDTH: Final[int] = 44
+
+WHEEL_NAMES: Final[tuple[str, str, str]] = ("A", "B", "BOT")
 
 PRESETS: Final[dict[str, str]] = {
     "1": "FLAT",
@@ -109,17 +103,6 @@ PRESETS: Final[dict[str, str]] = {
 
 def _clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
-
-
-def poll_key() -> str | None:
-    """Non-blocking single keypress; caller must already be in raw mode."""
-    ready, _, _ = select.select([sys.stdin], [], [], 0)
-    if not ready:
-        return None
-    ch = sys.stdin.read(1)
-    if ch == "":  # EOF (piped dry-run) — quit cleanly
-        return "q"
-    return "space" if ch == " " else ch
 
 
 def mix(preset: str, base: float, diff: float) -> tuple[float, float, float]:
@@ -164,20 +147,14 @@ class Rig:
 
     def wheels(self, a: float, b: float, bot: float) -> None:
         """Per-wheel power 0..1 -> ESC throttle (-1 = 1000us = stopped)."""
-        vals = [_clamp(v, 0.0, 1.0) for v in (a, b, bot)]
         if self.dry_run:
-            print(
-                f"\r[dry] A {vals[0]:.2f}  B {vals[1]:.2f}  BOT {vals[2]:.2f}   ",
-                end="",
-                flush=True,
-            )
             return
+        vals = [_clamp(v, 0.0, 1.0) for v in (a, b, bot)]
         for esc, v in zip(self._escs, vals, strict=True):
             esc.throttle = -1.0 + 2.0 * v
 
     def feed(self, angle: float) -> None:
         if self.dry_run:
-            print(f"\r[dry] feed -> {angle:.0f} deg   ", end="", flush=True)
             return
         self._feed.angle = _clamp(angle, 0.0, 180.0)
 
@@ -189,34 +166,110 @@ def fire_one(rig: Rig) -> None:
     time.sleep(FEED_DWELL)
 
 
-def floor_hunt(rig: Rig) -> dict[str, float]:
+def _bar(v: float, floor: float | None) -> str:
+    """ASCII throttle bar with an optional ``|`` floor marker."""
+    fill = round(_clamp(v / BAR_VMAX, 0.0, 1.0) * BAR_WIDTH)
+    cells = ["#" if i < fill else "-" for i in range(BAR_WIDTH)]
+    if floor is not None:
+        pos = round(_clamp(floor / BAR_VMAX, 0.0, 1.0) * (BAR_WIDTH - 1))
+        cells[pos] = "|"
+    return "".join(cells)
+
+
+class Console:
+    """Curses dashboard: big per-wheel bars + status, non-blocking keys."""
+
+    def __init__(self, scr: Any) -> None:
+        self.scr = scr
+        with contextlib.suppress(curses.error):  # some terminals can't hide the cursor
+            curses.curs_set(0)
+        scr.nodelay(True)
+        self.msg_text = ""
+
+    def key(self) -> str | None:
+        ch = self.scr.getch()
+        if ch == -1:
+            return None
+        if ch == ord(" "):
+            return "space"
+        if 0 <= ch < 256:
+            return chr(ch)
+        return None  # resize / function keys — ignore
+
+    def drain_keys(self) -> None:
+        while self.scr.getch() != -1:
+            pass
+
+    def msg(self, text: str) -> None:
+        self.msg_text = text
+
+    def draw(
+        self,
+        preset: str,
+        base: float,
+        diff: float,
+        thr: tuple[float, float, float],
+        fired: int,
+        floors: dict[str, float],
+        dry: bool,
+    ) -> None:
+        scr = self.scr
+
+        def put(y: int, x: int, s: str, attr: int = 0) -> None:
+            with contextlib.suppress(curses.error):  # tiny terminal — clip silently
+                scr.addstr(y, x, s, attr)
+
+        scr.erase()
+        title = "TRI-WHEEL SPIN TEST" + ("  [DRY RUN]" if dry else "")
+        put(0, 0, title, curses.A_BOLD)
+        put(2, 0, f" {preset} ", curses.A_REVERSE | curses.A_BOLD)
+        put(2, 16, f"base {base:.3f}   diff {diff:.3f}   balls {fired}")
+        for i, name in enumerate(WHEEL_NAMES):
+            floor = floors.get(name)
+            row = f"{name:<3} {thr[i]:.3f} [{_bar(thr[i], floor)}]"
+            put(4 + i, 0, row, curses.A_BOLD)
+        if floors:
+            floors_line = "floors: " + "  ".join(f"{k}={v:.3f}" for k, v in floors.items())
+        else:
+            floors_line = "floors: unknown — press d to hunt (they drift with battery charge)"
+        put(8, 0, floors_line)
+        put(10, 0, self.msg_text, curses.A_DIM)
+        put(12, 0, "1 flat   2 topspin   3 backspin   4/5 sidespin   f fire   d floor hunt")
+        put(13, 0, "+/- base   ]/[ diff   space E-STOP   q quit")
+        scr.refresh()
+
+
+def floor_hunt(
+    rig: Rig,
+    con: Console,
+    fired: int,
+    floors: dict[str, float],
+) -> None:
     """Find each wheel's spin-up throttle floor at the current battery charge.
 
     Ramps ONE wheel at a time (others stopped) from FLOOR_START in FLOOR_STEP
     increments, dwelling FLOOR_DWELL at each. Press any key the moment the
-    wheel starts to spin; x skips that wheel. Caller is already in raw mode,
-    hence the explicit \r\n line endings.
+    wheel starts to spin; x skips that wheel. Updates ``floors`` in place.
     """
-    names = ("A", "B", "BOT")
-    floors: dict[str, float] = {}
-    print("\r\nFLOOR HUNT — watch each wheel: any key = spinning, x = skip", end="\r\n")
-    for i, name in enumerate(names):
+    for i, name in enumerate(WHEEL_NAMES):
         if rig.dry_run:
-            floors[name] = FLOOR_START + 10 * FLOOR_STEP  # simulated
-            print(f"[dry] {name} floor {floors[name]:.3f}", end="\r\n")
+            floors[name] = FLOOR_START + 4 * FLOOR_STEP  # simulated
             continue
         vals = [0.0, 0.0, 0.0]
-        rig.wheels(*vals)
-        time.sleep(1.0)  # let it fully stop
+        rig.wheels(vals[0], vals[1], vals[2])
+        con.msg(f"FLOOR HUNT {name}: any key the moment it spins, x = skip")
+        con.draw("HUNT", 0.0, 0.0, (vals[0], vals[1], vals[2]), fired, floors, rig.dry_run)
+        time.sleep(1.0)  # let everything fully stop
+        con.drain_keys()
         throttle = FLOOR_START
         while throttle <= FLOOR_MAX:
             vals[i] = throttle
-            rig.wheels(*vals)
-            print(f"\r{name}: {throttle:.3f}  ", end="", flush=True)
+            rig.wheels(vals[0], vals[1], vals[2])
+            con.draw("HUNT", throttle, 0.0, (vals[0], vals[1], vals[2]), fired, floors, False)
             deadline = time.monotonic() + FLOOR_DWELL
             key = None
             while time.monotonic() < deadline:
-                key = poll_key()
+                key = con.key()
                 if key:
                     break
                 time.sleep(0.02)
@@ -227,26 +280,76 @@ def floor_hunt(rig: Rig) -> dict[str, float]:
                 break
             throttle = round(throttle + FLOOR_STEP, 3)
         vals[i] = 0.0
-        rig.wheels(*vals)
-        note = f"{name} floor {floors[name]:.3f}" if name in floors else f"{name} skipped"
-        print(f"\r{note}            ", end="\r\n")
+        rig.wheels(vals[0], vals[1], vals[2])
         time.sleep(0.5)
-    if floors:
-        summary = "  ".join(f"{k}={v:.3f}" for k, v in floors.items())
-        print(f"floors @ today's charge: {summary}", end="\r\n")
-        print("(feed these into ThrottleMap per-wheel floors)", end="\r\n")
-    return floors
+    summary = "  ".join(f"{k}={v:.3f}" for k, v in floors.items()) if floors else "none found"
+    prefix = "[dry] simulated " if rig.dry_run else ""
+    con.msg(f"{prefix}floors @ today's charge: {summary}")
 
 
-def status(
-    preset: str, base: float, diff: float, thr: tuple[float, float, float], fired: int
-) -> None:
-    print(
-        f"\r{preset:<11} base {base:.2f} diff {diff:.2f} | "
-        f"A {thr[0]:.2f} B {thr[1]:.2f} BOT {thr[2]:.2f} | balls {fired}   ",
-        end="",
-        flush=True,
+def run(scr: Any, args: argparse.Namespace) -> int:
+    con = Console(scr)
+    rig = Rig(dry_run=args.dry_run)
+    base = _clamp(args.throttle, 0.0, 1.0)
+    diff = _clamp(args.diff, 0.0, 0.3)
+    preset = "FLAT"
+    floors: dict[str, float] = {}
+    fired = 0
+
+    thr = (0.0, 0.0, 0.0)
+    con.msg(
+        f"arming 3 ESCs on ch {UPPER_ESC_A}/{UPPER_ESC_B}/{BOTTOM_ESC} "
+        f"({ARM_SECONDS:.0f}s at zero throttle)..."
     )
+    con.draw(preset, base, diff, thr, fired, floors, rig.dry_run)
+    rig.wheels(*thr)
+    rig.feed(LOAD_ANGLE)
+    time.sleep(ARM_SECONDS)
+
+    thr = mix(preset, base, diff)
+    con.msg(f"spinning up {preset} at {base:.3f}...")
+    con.draw(preset, base, diff, thr, fired, floors, rig.dry_run)
+    rig.wheels(*thr)
+    time.sleep(SPINUP_SECONDS)
+    con.msg("ready")
+
+    try:
+        while True:
+            key = con.key()
+            if key in ("space", "q", "\x03"):
+                break
+            if key in PRESETS:
+                preset = PRESETS[key]
+            elif key in ("+", "="):
+                base = _clamp(base + STEP, 0.0, 1.0)
+            elif key == "-":
+                base = _clamp(base - STEP, 0.0, 1.0)
+            elif key == "]":
+                diff = _clamp(diff + STEP, 0.0, 0.3)
+            elif key == "[":
+                diff = _clamp(diff - STEP, 0.0, 0.3)
+            elif key == "f":
+                fire_one(rig)
+                fired += 1
+                con.msg(f"ball {fired} fired ({preset})")
+            elif key == "d":
+                floor_hunt(rig, con, fired, floors)
+                time.sleep(SPINUP_SECONDS)  # preset spins back up below
+            thr = mix(preset, base, diff)
+            rig.wheels(*thr)
+            stalled = [
+                name
+                for name, t in zip(WHEEL_NAMES, thr, strict=True)
+                if (fl := floors.get(name)) is not None and 0.0 < t < fl
+            ]
+            if stalled:
+                con.msg(f"WARNING: {'/'.join(stalled)} below floor — stalled")
+            con.draw(preset, base, diff, thr, fired, floors, rig.dry_run)
+            time.sleep(SLICE)
+    finally:
+        rig.wheels(0.0, 0.0, 0.0)
+        rig.feed(LOAD_ANGLE)
+    return fired
 
 
 def main() -> None:
@@ -256,69 +359,14 @@ def main() -> None:
     p.add_argument("--dry-run", action="store_true", help="rehearse off-hardware")
     args = p.parse_args()
 
-    rig = Rig(dry_run=args.dry_run)
-    base = _clamp(args.throttle, 0.0, 1.0)
-    diff = _clamp(args.diff, 0.0, 0.3)
-    preset = "FLAT"
-
-    print(
-        f"Arming 3 ESCs on ch {UPPER_ESC_A}/{UPPER_ESC_B}/{BOTTOM_ESC} "
-        f"({ARM_SECONDS:.0f}s at zero throttle)..."
-    )
-    rig.wheels(0.0, 0.0, 0.0)
-    rig.feed(LOAD_ANGLE)
-    time.sleep(ARM_SECONDS)
-
-    thr = mix(preset, base, diff)
-    print(f"Spinning up FLAT at {base:.2f}...")
-    rig.wheels(*thr)
-    time.sleep(SPINUP_SECONDS)
-    print(
-        "Keys: 1=flat 2=top 3=back 4/5=side +/-=throttle [/]=diff "
-        "f=fire d=floorhunt space=E-STOP q=quit"
-    )
-
-    fired = 0
-    fd = sys.stdin.fileno()
-    is_tty = sys.stdin.isatty()
-    old = termios.tcgetattr(fd) if is_tty else None
     try:
-        if is_tty:
-            tty.setraw(fd)
-        status(preset, base, diff, thr, fired)
-        while True:
-            key = poll_key()
-            if key in ("space", "q", "\x03"):
-                break
-            dirty = False
-            if key in PRESETS:
-                preset, dirty = PRESETS[key], True
-            elif key in ("+", "="):
-                base, dirty = _clamp(base + STEP, 0.0, 1.0), True
-            elif key == "-":
-                base, dirty = _clamp(base - STEP, 0.0, 1.0), True
-            elif key == "]":
-                diff, dirty = _clamp(diff + STEP, 0.0, 0.3), True
-            elif key == "[":
-                diff, dirty = _clamp(diff - STEP, 0.0, 0.3), True
-            elif key == "f":
-                fire_one(rig)
-                fired += 1
-                dirty = True
-            elif key == "d":
-                floor_hunt(rig)
-                dirty = True  # dirty path spins the preset back up
-            if dirty:
-                thr = mix(preset, base, diff)
-                rig.wheels(*thr)
-                status(preset, base, diff, thr, fired)
-            time.sleep(SLICE)
-    finally:
-        if old is not None:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
-        rig.wheels(0.0, 0.0, 0.0)
-        rig.feed(LOAD_ANGLE)
-        print(f"\nDone — {fired} balls. All wheels stopped, feed at LOAD.")
+        fired = curses.wrapper(run, args)
+    except KeyboardInterrupt:
+        fired = -1
+    if fired >= 0:
+        print(f"Done — {fired} balls. All wheels stopped, feed at LOAD.")
+    else:
+        print("Interrupted — wheels stopped, feed at LOAD.")
 
 
 if __name__ == "__main__":
