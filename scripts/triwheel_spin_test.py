@@ -23,12 +23,22 @@ Live keys:
     d             FLOOR HUNT: ramp each wheel alone from zero; press any
                   key the moment it spins (x = skip wheel). Floors show as
                   red ticks on the bars — AT TODAY'S BATTERY CHARGE.
+    c             CALIBRATE ESC throttle range for the selected wheel
+                  (up/down first; ALL = all three). Guided: unplug battery,
+                  full throttle, replug + beeps, min stored. x aborts.
     space         E-STOP: all wheels to zero, feed to LOAD, exit
     q             quit gracefully
 
 Per-wheel control: each wheel's throttle = preset mix + that wheel's trim.
 Select a wheel with up/down (▸ marks it) and nudge it with +/-. Trims
 persist across preset changes — use them to balance mismatched wheels/ESCs.
+
+CALIBRATION ('c'): standard airplane-ESC range calibration. The wizard
+holds the selected channel(s) at 2000us while you plug the battery in (the
+ESC beeps to acknowledge full throttle), then drops to 1000us (confirm
+beeps + normal arming tones). Non-selected wheels are held at 1000us so
+they simply arm. This is the hardware fix for the ch4 keeps-spinning-at-
+zero problem — after calibrating, 1000us is a true stop on that ESC.
 
 SHUTDOWN: on quit/E-STOP all wheels are commanded to zero throttle, held
 briefly so the ESCs latch it, then the PWM signal is cut entirely so any
@@ -175,6 +185,17 @@ class Rig:
         for esc, v in zip(self._escs, vals, strict=True):
             esc.throttle = -1.0 + 2.0 * v
 
+    def raw(self, vals: tuple[float | None, ...]) -> None:
+        """Direct ESC throttle in [-1, 1] per wheel, or None = no signal.
+
+        Calibration needs true full/min endpoints, bypassing the 0..1
+        power mapping used everywhere else.
+        """
+        if self.dry_run:
+            return
+        for esc, v in zip(self._escs, vals, strict=True):
+            esc.throttle = v
+
     def wheels_signal_off(self) -> None:
         """Cut the PWM signal on all wheel channels (ESC failsafe = motor off).
 
@@ -246,6 +267,7 @@ class SpinTestApp(App[int]):
         Binding("z", "zero_trims", "zero trims", show=False),
         Binding("f", "fire", "fire"),
         Binding("d", "floor_hunt", "floor hunt"),
+        Binding("c", "calibrate", "cal ESC"),
         Binding("space", "estop", "E-STOP"),
         Binding("q", "quit_app", "quit"),
     ]
@@ -262,6 +284,7 @@ class SpinTestApp(App[int]):
         self.fired = 0
         self.armed = False
         self.hunting = False
+        self.calibrating = False
         self._stopped = False
         self._hunt_keys: asyncio.Queue[str] = asyncio.Queue()
         self._thr: tuple[float, float, float] = (0.0, 0.0, 0.0)
@@ -371,7 +394,7 @@ class SpinTestApp(App[int]):
     # --- keys ---------------------------------------------------------------
 
     def on_key(self, event: Any) -> None:
-        if self.hunting:  # any key marks spin-up (x skips) — see _hunt
+        if self.hunting or self.calibrating:  # wizards eat every key — see _hunt/_calibrate
             self._hunt_keys.put_nowait(event.key)
             event.stop()
             event.prevent_default()
@@ -486,6 +509,58 @@ class SpinTestApp(App[int]):
         finally:
             self.hunting = False
             self._apply()  # spin the preset back up
+
+    def action_calibrate(self) -> None:
+        if not self.armed or self.hunting or self.calibrating:
+            return
+        self.run_worker(self._calibrate(), exclusive=True)
+
+    async def _next_key(self) -> str:
+        """Block until the next captured keypress (queue is drained by caller)."""
+        return await self._hunt_keys.get()
+
+    async def _calibrate(self) -> None:
+        targets = WHEEL_NAMES if self.target == "ALL" else (self.target,)
+        idxs = [WHEEL_NAMES.index(n) for n in targets]
+        names = "+".join(targets)
+        self.calibrating = True
+        try:
+            while not self._hunt_keys.empty():
+                self._hunt_keys.get_nowait()
+            self.rig.wheels(0.0, 0.0, 0.0)
+            self._thr = (0.0, 0.0, 0.0)
+            self._refresh()
+            self._message(f"CAL {names} 1/3: UNPLUG the battery — any key when it's out (x aborts)")
+            if await self._next_key() == "x":
+                self._message("calibration aborted")
+                return
+            # full throttle on targets, min on the rest, BEFORE power comes back
+            self.rig.raw(tuple(1.0 if i in idxs else -1.0 for i in range(3)))
+            self._thr = tuple(1.0 if i in idxs else 0.0 for i in range(3))  # type: ignore[assignment]
+            self._refresh()
+            self._message(
+                f"CAL {names} 2/3: PLUG the battery in — wait for the full-throttle "
+                "beeps, then any key (x aborts)"
+            )
+            if await self._next_key() == "x":
+                self.rig.raw((-1.0, -1.0, -1.0))
+                self._message("calibration aborted — all ESCs at min")
+                return
+            self.rig.raw((-1.0, -1.0, -1.0))
+            self._thr = (0.0, 0.0, 0.0)
+            self._refresh()
+            self._message(
+                f"CAL {names} 3/3: min stored — wait for confirm + arming tones, then any key"
+            )
+            await self._next_key()
+            self._message(
+                f"{names} calibrated — floors have moved, re-run d. "
+                "Any key to spin back up (hands clear!)"
+            )
+            await self._next_key()
+        finally:
+            self.calibrating = False
+            self._apply()
 
     def action_estop(self) -> None:
         self._rig_stop()
