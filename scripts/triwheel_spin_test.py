@@ -12,13 +12,13 @@ Spin convention (contact surfaces all move in the launch direction):
 
 Run ON THE PI (needs the ``pi`` extra: ``uv sync --extra pi``):
 
-    uv run python scripts/triwheel_spin_test.py --throttle 0.30 --diff 0.10
+    uv run python scripts/triwheel_spin_test.py --throttle 0.12 --diff 0.03
 
 Live keys:
     1 / 2 / 3     preset: FLAT / TOPSPIN / BACKSPIN
     4 / 5         preset: SIDESPIN A-fast / B-fast (upper pair differential)
-    + / -         base throttle +-0.02 (all wheels rescale)
-    ] / [         spin differential +-0.02
+    + / -         base throttle +-0.01 (all wheels rescale)
+    ] / [         spin differential +-0.01
     f             fire one ball (feed servo LOAD->DISCH->LOAD)
     space         E-STOP: all wheels to zero, feed to LOAD, exit
     q             quit gracefully
@@ -33,8 +33,13 @@ NEW-ESC NOTE: if the fresh bottom ESC won't arm (endless beeping), it may
 need one-time throttle-range calibration — do that per its manual before
 this test, or it will sit silent while the pair spins.
 
-SAFETY: start LOW (--throttle 0.25-0.35). All three wheels spin the whole
-session; keep hands out of the nip. Pass --dry-run to rehearse off-hardware.
+SPEED NOTE (bench, 2026-07): even ONE wheel at 20% throttle fired "really
+fast" — with three wheels gripping, the useful window is roughly 0.10-0.20,
+just above the ~9% ESC deadband. Below ~0.09 a wheel stops entirely, so at
+low base keep diff small or the slow wheel of a spin preset will stall.
+
+SAFETY: all three wheels spin the whole session; keep hands out of the nip.
+Pass --dry-run to rehearse off-hardware.
 """
 
 from __future__ import annotations
@@ -78,7 +83,7 @@ LOAD_ANGLE: Final[float] = 70.0  # v3 ring arm (2026-07-04)
 DISCH_ANGLE: Final[float] = 175.0
 FEED_DWELL: Final[float] = 0.65
 SLICE: Final[float] = 0.05
-STEP: Final[float] = 0.02
+STEP: Final[float] = 0.01  # fine steps — the whole useful range is ~0.09-0.20
 
 PRESETS: Final[dict[str, str]] = {
     "1": "FLAT",
@@ -184,8 +189,8 @@ def status(
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--throttle", type=float, default=0.30, help="base wheel power 0..1")
-    p.add_argument("--diff", type=float, default=0.10, help="spin differential 0..0.3")
+    p.add_argument("--throttle", type=float, default=0.12, help="base wheel power 0..1")
+    p.add_argument("--diff", type=float, default=0.03, help="spin differential 0..0.3")
     p.add_argument("--dry-run", action="store_true", help="rehearse off-hardware")
     args = p.parse_args()
 
