@@ -1,0 +1,4 @@
+opencv-python>=4.9
+numpy>=1.26
+# optional but recommended for player_track.py (HOG fallback works without it):
+mediapipe>=0.10
