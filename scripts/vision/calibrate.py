@@ -8,6 +8,7 @@
 Board: 9x6 inner corners, 20mm squares (fits letter landscape at 100% scale).
 Verify with a ruler after printing: one square must be 20mm.
 """
+
 import argparse
 import json
 from pathlib import Path
@@ -15,7 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-COLS, ROWS = 9, 6          # inner corners
+COLS, ROWS = 9, 6  # inner corners
 SQUARE_MM = 20.0
 OUT = Path(__file__).parent / "camera_intrinsics.json"
 
@@ -26,13 +27,15 @@ def make_board() -> None:
     for r in range(ROWS + 1):
         for c in range(COLS + 1):
             if (r + c) % 2 == 0:
-                img[r * px:(r + 1) * px, c * px:(c + 1) * px] = 0
+                img[r * px : (r + 1) * px, c * px : (c + 1) * px] = 0
     # white border so corner detection works at the edges
     img = cv2.copyMakeBorder(img, px, px, px, px, cv2.BORDER_CONSTANT, value=255)
     fn = Path(__file__).parent / "checkerboard.png"
     cv2.imwrite(str(fn), img)
-    print(f"wrote {fn} — print at 100% scale, verify squares are {SQUARE_MM}mm, "
-          f"tape to something flat")
+    print(
+        f"wrote {fn} — print at 100% scale, verify squares are {SQUARE_MM}mm, "
+        f"tape to something flat"
+    )
 
 
 def calibrate(cam: int) -> None:
@@ -53,14 +56,25 @@ def calibrate(cam: int) -> None:
         vis = frame.copy()
         if found:
             cv2.drawChessboardCorners(vis, (COLS, ROWS), corners, found)
-        cv2.putText(vis, f"captures: {len(obj_pts)}  (need >=10)", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0) if found else (0, 0, 255), 2)
+        cv2.putText(
+            vis,
+            f"captures: {len(obj_pts)}  (need >=10)",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 255, 0) if found else (0, 0, 255),
+            2,
+        )
         cv2.imshow("calibrate", vis)
         k = cv2.waitKey(1) & 0xFF
         if k == ord(" ") and found:
             corners = cv2.cornerSubPix(
-                gray, corners, (11, 11), (-1, -1),
-                (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
+                gray,
+                corners,
+                (11, 11),
+                (-1, -1),
+                (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001),
+            )
             obj_pts.append(objp)
             img_pts.append(corners)
             print(f"captured {len(obj_pts)}")
@@ -74,14 +88,19 @@ def calibrate(cam: int) -> None:
     rms, K, dist, _, _ = cv2.calibrateCamera(obj_pts, img_pts, shape, None, None)
     fx = K[0, 0]
     hfov = float(np.degrees(2 * np.arctan(shape[0] / (2 * fx))))
-    OUT.write_text(json.dumps({
-        "rms_reprojection_error_px": round(float(rms), 3),
-        "image_size": shape,
-        "K": K.tolist(),
-        "dist_coeffs": dist.ravel().tolist(),
-        "hfov_deg": round(hfov, 2),
-        "captures": len(obj_pts),
-    }, indent=2))
+    OUT.write_text(
+        json.dumps(
+            {
+                "rms_reprojection_error_px": round(float(rms), 3),
+                "image_size": shape,
+                "K": K.tolist(),
+                "dist_coeffs": dist.ravel().tolist(),
+                "hfov_deg": round(hfov, 2),
+                "captures": len(obj_pts),
+            },
+            indent=2,
+        )
+    )
     print(f"RMS error {rms:.3f}px ({'good' if rms < 1 else 'redo with more varied poses'})")
     print(f"hFOV {hfov:.1f} deg   saved -> {OUT.name}")
 

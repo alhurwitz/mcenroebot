@@ -11,6 +11,7 @@ Usage:
 Preview keys: q=quit  s=save frame  r=reset FOV clicks
 Results (measured FPS, resolution, FOV) are saved to camera_profile.json.
 """
+
 import argparse
 import json
 import time
@@ -78,12 +79,26 @@ def preview(cam: int, fov_target: tuple[float, float] | None) -> None:
         h, w = frame.shape[:2]
         fps = len(times) / sum(times) if times else 0.0
         lat_ms = 1000 * sum(times) / len(times)
-        cv2.putText(frame, f"{w}x{h}  {fps:.1f} fps  grab {lat_ms:.0f} ms",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(
+            frame,
+            f"{w}x{h}  {fps:.1f} fps  grab {lat_ms:.0f} ms",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 255, 0),
+            2,
+        )
 
         if fov_target:
-            cv2.putText(frame, "FOV: click LEFT then RIGHT edge of target (r=reset)",
-                        (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+            cv2.putText(
+                frame,
+                "FOV: click LEFT then RIGHT edge of target (r=reset)",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 255, 255),
+                2,
+            )
             for c in clicks:
                 cv2.drawMarker(frame, c, (0, 0, 255), cv2.MARKER_CROSS, 20, 2)
             if len(clicks) >= 2:
@@ -111,8 +126,9 @@ def preview(cam: int, fov_target: tuple[float, float] | None) -> None:
 
     result = {"cam_index": cam, "width": w, "height": h, "measured_fps": round(fps, 1)}
     if fov_target and len(clicks) >= 2:
-        result.update({"focal_px": round(focal_px, 1),
-                       "hfov_deg": round(hfov, 2), "vfov_deg": round(vfov, 2)})
+        result.update(
+            {"focal_px": round(focal_px, 1), "hfov_deg": round(hfov, 2), "vfov_deg": round(vfov, 2)}
+        )
     save_profile(result)
     cap.release()
     cv2.destroyAllWindows()

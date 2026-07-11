@@ -19,19 +19,20 @@ Events print as JSON lines; anything (rally_mode, TTS smack talk) can tail them.
 All thresholds are image-space heuristics for a single fixed camera — tune the
 CONSTANTS block against real footage, then lock. See EVENT_PIPELINE.md.
 """
+
 import argparse
 import json
 import sys
-import time
 from dataclasses import dataclass, field
 
 # ---- CONSTANTS: tune against real footage ---------------------------------
-LAUNCH_SPEED_PX_S = 400     # min |v| to call it a launch
-BOUNCE_VY_FLIP_PX_S = 60    # vy must swing from > +this to < -this
-RETURN_VX_FLIP_PX_S = 80    # vx reversal magnitude for a return hit
-LOST_TIMEOUT_S = 0.5        # gap that ends a track
-MIN_TRACK_PTS = 3           # observations before velocity is trusted
-RALLY_RESET_S = 3.0         # quiet time -> next launch starts a new rally
+LAUNCH_SPEED_PX_S = 400  # min |v| to call it a launch
+JUMP_REJECT_PX = 300  # obs farther than this from last point = decoy blob, drop
+BOUNCE_VY_FLIP_PX_S = 60  # vy must swing from > +this to < -this
+RETURN_VX_FLIP_PX_S = 80  # vx reversal magnitude for a return hit
+LOST_TIMEOUT_S = 0.5  # gap that ends a track
+MIN_TRACK_PTS = 3  # observations before velocity is trusted
+RALLY_RESET_S = 3.0  # quiet time -> next launch starts a new rally
 # ----------------------------------------------------------------------------
 
 
@@ -42,9 +43,13 @@ class Track:
     ys: list = field(default_factory=list)
 
     def add(self, t, x, y):
-        self.ts.append(t); self.xs.append(x); self.ys.append(y)
+        self.ts.append(t)
+        self.xs.append(x)
+        self.ys.append(y)
         if len(self.ts) > 8:  # short window: velocities stay current
-            self.ts.pop(0); self.xs.pop(0); self.ys.pop(0)
+            self.ts.pop(0)
+            self.xs.pop(0)
+            self.ys.pop(0)
 
     def vel(self):
         """(vx, vy) px/s smoothed over the window, or None. For launch detection."""
@@ -83,15 +88,27 @@ class EventDetector:
         self.on_event({"t": round(t, 3), "event": name, **data})
 
     def observe(self, t, x, y, r=None):
-        if x is None:                       # 'lost' frame
-            if (self.in_rally and self.last_seen_t is not None
-                    and t - self.last_seen_t > LOST_TIMEOUT_S):
+        if x is None:  # 'lost' frame
+            if (
+                self.in_rally
+                and self.last_seen_t is not None
+                and t - self.last_seen_t > LOST_TIMEOUT_S
+            ):
                 self.emit(t, "BALL_LOST", bounces=self.bounces)
                 self._reset()
             return
         self.last_seen_t = t
         if self.track.ts and t - self.track.ts[-1] > RALLY_RESET_S:
             self._reset()
+        # teleport guard: >JUMP_REJECT_PX between consecutive frames is a second
+        # orange object flickering in, not ball motion — drop the observation.
+        # (Live tracking also gates in ball_detect; this protects CSV replays.)
+        if (
+            self.track.ts
+            and ((x - self.track.xs[-1]) ** 2 + (y - self.track.ys[-1]) ** 2) ** 0.5
+            > JUMP_REJECT_PX
+        ):
+            return
         self.track.add(t, x, y)
         vel = self.track.vel()
         inst = self.track.vel_inst()
@@ -116,8 +133,12 @@ class EventDetector:
                     self._reset()
                     return
             # return hit: strong horizontal reversal after >=1 bounce
-            if (self.bounces >= 1 and abs(pvx) > RETURN_VX_FLIP_PX_S
-                    and abs(vx) > RETURN_VX_FLIP_PX_S and (pvx > 0) != (vx > 0)):
+            if (
+                self.bounces >= 1
+                and abs(pvx) > RETURN_VX_FLIP_PX_S
+                and abs(vx) > RETURN_VX_FLIP_PX_S
+                and (pvx > 0) != (vx > 0)
+            ):
                 self.emit(t, "RETURN_HIT", verdict="player_returned")
                 self._reset()
                 return
@@ -147,6 +168,7 @@ def replay(path: str) -> None:
 
 def live(cam: int) -> None:
     from ball_detect import track as bd_track
+
     det = EventDetector()
     bd_track(cam, on_obs=det.observe)
 

@@ -15,6 +15,7 @@ person detector. Prints one line per frame:
 deg_err is exactly what the pan drum needs: positive = person is to the
 right, pan right. Keys: q=quit
 """
+
 import argparse
 import json
 import time
@@ -30,14 +31,17 @@ def get_hfov() -> float:
         hfov = json.loads(PROFILE.read_text()).get("hfov_deg")
         if hfov:
             return hfov
-    print("warning: no hfov_deg in camera_profile.json — assuming 60 deg. "
-          "Run cam_bringup.py --fov to measure.")
+    print(
+        "warning: no hfov_deg in camera_profile.json — assuming 60 deg. "
+        "Run cam_bringup.py --fov to measure."
+    )
     return 60.0
 
 
 class MediaPipeDetector:
     def __init__(self):
         import mediapipe as mp  # noqa: import here so HOG path works without it
+
         self.pose = mp.solutions.pose.Pose(model_complexity=0)  # 0 = fastest
 
     def detect(self, frame):
@@ -95,14 +99,19 @@ def main(cam: int, force_hog: bool) -> None:
             px_err = cx - w / 2
             deg_err = px_err / w * hfov
             print(f"{t:.3f},{px_err:+.0f},{deg_err:+.2f}")
-            cv2.drawMarker(frame, (int(cx), int(cy)), (0, 255, 0),
-                           cv2.MARKER_CROSS, 30, 2)
-            cv2.putText(frame, f"pan err {deg_err:+.1f} deg ({label})", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.drawMarker(frame, (int(cx), int(cy)), (0, 255, 0), cv2.MARKER_CROSS, 30, 2)
+            cv2.putText(
+                frame,
+                f"pan err {deg_err:+.1f} deg ({label})",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2,
+            )
         else:
             print(f"{t:.3f},lost")
-            cv2.putText(frame, "no player", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            cv2.putText(frame, "no player", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.line(frame, (w // 2, 0), (w // 2, h), (255, 255, 0), 1)
         cv2.imshow("player track (q=quit)", frame)
         if (cv2.waitKey(1) & 0xFF) == ord("q"):
