@@ -17,6 +17,7 @@ import json
 import time
 from math import atan, degrees
 from pathlib import Path
+from typing import Any
 
 import cv2
 
@@ -39,7 +40,7 @@ def scan(max_idx: int = 5) -> list[int]:
     return found
 
 
-def save_profile(update: dict) -> None:
+def save_profile(update: dict[str, Any]) -> None:
     profile = json.loads(PROFILE.read_text()) if PROFILE.exists() else {}
     profile.update(update)
     PROFILE.write_text(json.dumps(profile, indent=2))
@@ -56,7 +57,7 @@ def preview(cam: int, fov_target: tuple[float, float] | None) -> None:
 
     clicks: list[tuple[int, int]] = []
 
-    def on_mouse(event, x, y, flags, param):
+    def on_mouse(event: int, x: int, y: int, flags: int, param: Any) -> None:
         if event == cv2.EVENT_LBUTTONDOWN and fov_target:
             clicks.append((x, y))
 

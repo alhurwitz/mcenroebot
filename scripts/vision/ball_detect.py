@@ -17,6 +17,7 @@ import argparse
 import json
 import time
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 
 import cv2
@@ -31,23 +32,23 @@ MAX_JUMP_PX = 300  # max plausible ball movement between frames
 REACQUIRE_MISSES = 5  # lost frames before falling back to largest blob
 
 
-def load_hsv() -> dict:
+def load_hsv() -> dict[str, int]:
     if HSV_FILE.exists():
         return {**DEFAULTS, **json.loads(HSV_FILE.read_text())}
     return dict(DEFAULTS)
 
 
-def mask_for(frame, p: dict):
+def mask_for(frame: cv2.typing.MatLike, p: dict[str, int]) -> cv2.typing.MatLike:
     hsv = cv2.cvtColor(cv2.GaussianBlur(frame, (7, 7), 0), cv2.COLOR_BGR2HSV)
     m = cv2.inRange(hsv, (p["h_lo"], p["s_lo"], p["v_lo"]), (p["h_hi"], p["s_hi"], p["v_hi"]))
     m = cv2.erode(m, None, iterations=2)
     return cv2.dilate(m, None, iterations=2)
 
 
-def find_candidates(mask):
+def find_candidates(mask: cv2.typing.MatLike) -> list[tuple[float, float, float]]:
     """All sufficiently-round contours as (x, y, radius), largest first."""
     cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    out = []
+    out: list[tuple[float, float, float]] = []
     for c in cnts:
         (x, y), r = cv2.minEnclosingCircle(c)
         if r < MIN_RADIUS_PX:
@@ -60,7 +61,11 @@ def find_candidates(mask):
     return sorted(out, key=lambda b: -b[2])
 
 
-def find_ball(mask, prev=None, max_jump_px=MAX_JUMP_PX):
+def find_ball(
+    mask: cv2.typing.MatLike,
+    prev: tuple[float, float] | None = None,
+    max_jump_px: float = MAX_JUMP_PX,
+) -> tuple[float, float, float] | None:
     """Best candidate. Given a previous position, only accept the nearest
     candidate within max_jump_px — a distant blob is a decoy (second orange
     object), not the ball teleporting. No prev -> largest candidate."""
@@ -103,13 +108,16 @@ def tune(cam: int) -> None:
     cv2.destroyAllWindows()
 
 
-def track(cam: int, on_obs=None) -> None:
+def track(
+    cam: int,
+    on_obs: Callable[[float, float | None, float | None, float | None], None] | None = None,
+) -> None:
     """Track ball; call on_obs(t, x, y, r) per detection, on_obs(t, None...) when lost."""
     p = load_hsv()
     cap = cv2.VideoCapture(cam)
-    trail: deque = deque(maxlen=48)
+    trail: deque[tuple[int, int]] = deque(maxlen=48)
     t_start = time.perf_counter()
-    prev = None
+    prev: tuple[float, float] | None = None
     misses = 0
     while True:
         ok, frame = cap.read()

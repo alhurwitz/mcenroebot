@@ -42,9 +42,10 @@ def calibrate(cam: int) -> None:
     objp = np.zeros((ROWS * COLS, 3), np.float32)
     objp[:, :2] = np.mgrid[0:COLS, 0:ROWS].T.reshape(-1, 2) * SQUARE_MM
 
-    obj_pts, img_pts = [], []
+    obj_pts: list[cv2.typing.MatLike] = []
+    img_pts: list[cv2.typing.MatLike] = []
     cap = cv2.VideoCapture(cam)
-    shape = None
+    shape: tuple[int, ...] | None = None
     print("SPACE=capture when corners drawn, q=finish. Vary angle/distance/corner-of-frame.")
     while True:
         ok, frame = cap.read()
@@ -83,7 +84,7 @@ def calibrate(cam: int) -> None:
     cap.release()
     cv2.destroyAllWindows()
 
-    if len(obj_pts) < 10:
+    if len(obj_pts) < 10 or shape is None:
         raise SystemExit(f"only {len(obj_pts)} captures — need >=10, rerun")
     rms, K, dist, _, _ = cv2.calibrateCamera(obj_pts, img_pts, shape, None, None)
     fx = K[0, 0]

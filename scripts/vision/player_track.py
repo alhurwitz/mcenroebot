@@ -30,7 +30,7 @@ def get_hfov() -> float:
     if PROFILE.exists():
         hfov = json.loads(PROFILE.read_text()).get("hfov_deg")
         if hfov:
-            return hfov
+            return float(hfov)
     print(
         "warning: no hfov_deg in camera_profile.json — assuming 60 deg. "
         "Run cam_bringup.py --fov to measure."
@@ -39,12 +39,13 @@ def get_hfov() -> float:
 
 
 class MediaPipeDetector:
-    def __init__(self):
-        import mediapipe as mp  # noqa: import here so HOG path works without it
+    def __init__(self) -> None:
+        # imported here so the HOG path works without mediapipe installed
+        import mediapipe as mp  # type: ignore[import-not-found]
 
         self.pose = mp.solutions.pose.Pose(model_complexity=0)  # 0 = fastest
 
-    def detect(self, frame):
+    def detect(self, frame: cv2.typing.MatLike) -> tuple[float, float, str] | None:
         """Return (cx, cy, label) of torso center, or None."""
         h, w = frame.shape[:2]
         res = self.pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -59,22 +60,23 @@ class MediaPipeDetector:
 
 
 class HogDetector:
-    def __init__(self):
+    def __init__(self) -> None:
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
-    def detect(self, frame):
+    def detect(self, frame: cv2.typing.MatLike) -> tuple[float, float, str] | None:
         # HOG is slow at full res; detect on a half-size copy
         small = cv2.resize(frame, None, fx=0.5, fy=0.5)
         rects, weights = self.hog.detectMultiScale(small, winStride=(8, 8))
         if len(rects) == 0:
             return None
-        best = max(zip(rects, weights), key=lambda rw: rw[1])[0]
+        best = max(zip(rects, weights, strict=True), key=lambda rw: rw[1])[0]
         x, y, w, h = (v * 2 for v in best)
         return x + w / 2, y + h / 2, "hog"
 
 
 def main(cam: int, force_hog: bool) -> None:
+    det: MediaPipeDetector | HogDetector
     if force_hog:
         det = HogDetector()
     else:

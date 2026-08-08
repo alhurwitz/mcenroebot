@@ -23,7 +23,9 @@ CONSTANTS block against real footage, then lock. See EVENT_PIPELINE.md.
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 # ---- CONSTANTS: tune against real footage ---------------------------------
 LAUNCH_SPEED_PX_S = 400  # min |v| to call it a launch
@@ -38,11 +40,11 @@ RALLY_RESET_S = 3.0  # quiet time -> next launch starts a new rally
 
 @dataclass
 class Track:
-    ts: list = field(default_factory=list)
-    xs: list = field(default_factory=list)
-    ys: list = field(default_factory=list)
+    ts: list[float] = field(default_factory=list)
+    xs: list[float] = field(default_factory=list)
+    ys: list[float] = field(default_factory=list)
 
-    def add(self, t, x, y):
+    def add(self, t: float, x: float, y: float) -> None:
         self.ts.append(t)
         self.xs.append(x)
         self.ys.append(y)
@@ -51,14 +53,14 @@ class Track:
             self.xs.pop(0)
             self.ys.pop(0)
 
-    def vel(self):
+    def vel(self) -> tuple[float, float] | None:
         """(vx, vy) px/s smoothed over the window, or None. For launch detection."""
         if len(self.ts) < MIN_TRACK_PTS or self.ts[-1] == self.ts[0]:
             return None
         dt = self.ts[-1] - self.ts[0]
         return ((self.xs[-1] - self.xs[0]) / dt, (self.ys[-1] - self.ys[0]) / dt)
 
-    def vel_inst(self):
+    def vel_inst(self) -> tuple[float, float] | None:
         """(vx, vy) px/s from the last two points. For flip (bounce/return) detection —
         smoothing blurs sign reversals across the window."""
         if len(self.ts) < 2 or self.ts[-1] == self.ts[-2]:
@@ -70,25 +72,25 @@ class Track:
 class EventDetector:
     """Feed observe(); emits events via callback (default: JSON to stdout)."""
 
-    def __init__(self, on_event=None):
+    def __init__(self, on_event: Callable[[dict[str, Any]], None] | None = None) -> None:
         self.on_event = on_event or self._print
         self.track = Track()
-        self.prev_vel = None
-        self.last_seen_t = None
+        self.prev_vel: tuple[float, float] | None = None
+        self.last_seen_t: float | None = None
         self.in_rally = False
         self.bounces = 0
         self.last_event_t = -1e9
 
     @staticmethod
-    def _print(evt):
+    def _print(evt: dict[str, Any]) -> None:
         print(json.dumps(evt), flush=True)
 
-    def emit(self, t, name, **data):
+    def emit(self, t: float, name: str, **data: Any) -> None:
         self.last_event_t = t
         self.on_event({"t": round(t, 3), "event": name, **data})
 
-    def observe(self, t, x, y, r=None):
-        if x is None:  # 'lost' frame
+    def observe(self, t: float, x: float | None, y: float | None, r: float | None = None) -> None:
+        if x is None or y is None:  # 'lost' frame
             if (
                 self.in_rally
                 and self.last_seen_t is not None
@@ -144,7 +146,7 @@ class EventDetector:
                 return
         self.prev_vel = inst
 
-    def _reset(self):
+    def _reset(self) -> None:
         self.track = Track()
         self.prev_vel = None
         self.in_rally = False
