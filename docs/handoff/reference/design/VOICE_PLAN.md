@@ -4,19 +4,50 @@ McEnroe talks — and listens. Two modes: **MATCH** (score announcing + trash ta
 through the session) and **TRAINING** (coach mode: drills, per-shot feedback, pattern-based tips).
 Rev 2 adds a **live voice agent** the player can talk to mid-game, with tools to run the robot.
 
-## Provider decision — pending bake-off
+## Provider decision — RESOLVED 2026-08-16: OmniVoice (local, open weights)
 
-Run `scripts/tts_bakeoff.py` with `OPENAI_API_KEY` / `XAI_API_KEY` set, listen, pick by ear.
+Neither cloud provider was used and `scripts/tts_bakeoff.py` was never written. **OmniVoice**
+(`k2-fsa/OmniVoice`) wins outright for the canned path:
 
-| | OpenAI `gpt-4o-mini-tts` | Grok TTS (`api.x.ai/v1/tts`) |
-|---|---|---|
-| Prosody control | `instructions` free-text ("shout, indignant") | inline tags: `[pause]` `[sigh]` `[laugh]` `<loud>` `<soft>` |
-| Voices | 13 (try ash/onyx/verse) | 5 (try rex/leo) |
-| Price | ~$0.015/min | $15/1M chars (~similar) |
-| Live agent option | Realtime API ($32/$64 per 1M audio tok) | Voice Agent API ($3/hr flat) |
+| | OmniVoice (chosen) | OpenAI `gpt-4o-mini-tts` | Grok TTS |
+|---|---|---|---|
+| Runs | locally, `device_map="mps"` | cloud | cloud |
+| Cost | free — re-bake as often as you like | ~$0.015/min | $15/1M chars |
+| Prosody control | **cloned from a reference clip** | `instructions` free-text | inline tags |
+| Non-verbal tags | `[sigh]` `[laughter]` `[dissatisfaction-hnn]` `[surprise-ah]` | — | `[pause]` `[sigh]` `[laugh]` |
+| Speed | RTF ~0.025, 0.6B params, 24 kHz out | — | — |
+| Licence | code Apache 2.0, **weights CC-BY-NC** | commercial | commercial |
 
-Note: no cloning of McEnroe's real voice (both providers prohibit real-person mimicry).
-We do McEnroe-*style* lines in a stock voice with angry prosody.
+CC-BY-NC weights are fine for a hobby robot but mean this voice can never ship commercially.
+
+**Voice source: Albert's own McEnroe imitation, cloned zero-shot.** Tested both paths on the
+[demo Space](https://huggingface.co/spaces/k2-fsa/OmniVoice): attribute-based voice design
+(`instruct="male, middle-aged, high pitch, American accent"`) produced the right voice *type*
+but not the character; cloning a self-recorded imitation worked. So the pipeline is
+reference-only — the `instruct=` branch was never built.
+
+Still no cloning of McEnroe's real voice. Open weights removes the vendor's enforcement, not
+the underlying problem: right-of-publicity law (CA §3344, NY §50-51, TN ELVIS Act) attaches to
+the output regardless of which model made it. The persona rides on the *lines and delivery*,
+which is where it lived anyway.
+
+**Four references, not one** (`assets/voice/ref/`): prosody transfers from the reference clip,
+so `rage` / `whine` / `smug` / `grudging` are recorded separately and each line names the
+register it wants. Record all four in one session on the same mic — otherwise they clone as
+four different *people* and the bot changes voice between the taunt and the score.
+
+### What shipped (steps 1–3)
+
+- `src/mcenroebot/voice/` — `Bucket`, `Line`, `LineLibrary` (anti-repeat shuffle, no line twice
+  in a row across a reshuffle), `score_lines`, `plan_bake`, `pad_leading_silence`. Torch-free,
+  100% covered.
+- `assets/voice/lines.yaml` — 120 lines: 40 insult, 25 whine, 20 grudging_respect,
+  15 self_deprecation, 20 announce.
+- `scripts/bake_voice.py` — laptop-only CLI; `--dry-run`, `--bucket`, `--id`, `--scores`,
+  `--force`. Score grid (0–11 × 0–11, 144 clips) is generated, not hand-written.
+- 0.3 s of silence baked onto the front of every clip, for the BT wake-up problem below.
+
+Steps 4–7 (BT speaker, `events.py` wiring, `ScoreKeeper`, live agent) are unstarted.
 
 ## Architecture (hybrid: canned + live)
 

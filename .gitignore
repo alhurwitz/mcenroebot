@@ -226,3 +226,6 @@ __marimo__/
 __pycache__/
 *.py[cod]
 .venv/
+
+# Voice: baked WAV cache is regenerable from lines.yaml + ref/
+assets/voice/cache/

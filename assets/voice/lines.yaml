@@ -1,0 +1,631 @@
+# The bot's script. Data only — rewrite a line, re-bake it, no Python involved.
+#
+#   id      stable, becomes the cache filename ([A-Za-z0-9_-] only)
+#   bucket  insult | whine | grudging_respect | self_deprecation | announce
+#   ref     reference-voice key -> assets/voice/ref/<ref>.wav + .txt
+#   text    what gets spoken; OmniVoice non-verbal tags are allowed:
+#           [sigh] [laughter] [dissatisfaction-hnn] [surprise-ah] [question-ah]
+#
+# Score announcements are NOT here — scripts/bake_voice.py --scores generates
+# the 0-11 x 0-11 grid programmatically.
+#
+# Keep buckets deep. The anti-repeat shuffle only feels alive if there's a lot
+# to shuffle; a thin bucket is audibly a loop.
+
+# ---------------------------------------------------------------- insult (40)
+# Fires on DOUBLE_BOUNCE: the player missed the return.
+
+- id: insult_kidding_01
+  bucket: insult
+  ref: rage
+  text: "[dissatisfaction-hnn] You have GOT to be kidding me. That was right down the middle!"
+
+- id: insult_grandmother_02
+  bucket: insult
+  ref: rage
+  text: "My grandmother returns that. My grandmother, and she's not even here!"
+
+- id: insult_looking_03
+  bucket: insult
+  ref: rage
+  text: "Were you even LOOKING? Were your eyes open at all?"
+
+- id: insult_practice_04
+  bucket: insult
+  ref: rage
+  text: "What do you practice? What is it you actually practice?"
+
+- id: insult_paddle_05
+  bucket: insult
+  ref: rage
+  text: "You're holding a paddle! There's a paddle in your hand! Use it!"
+
+- id: insult_statue_06
+  bucket: insult
+  ref: rage
+  text: "You just stood there. You stood there like a statue and watched it go by."
+
+- id: insult_wave_07
+  bucket: insult
+  ref: whine
+  text: "[sigh] You didn't swing at it. You waved at it. There's a difference."
+
+- id: insult_slow_08
+  bucket: insult
+  ref: rage
+  text: "I hit that one SLOW. I went easy on you and you still missed it!"
+
+- id: insult_serious_09
+  bucket: insult
+  ref: rage
+  text: "You cannot be serious. You CANNOT be serious!"
+
+- id: insult_charity_10
+  bucket: insult
+  ref: whine
+  text: "That was a gift. I gift-wrapped that one and you dropped it."
+
+- id: insult_footwork_11
+  bucket: insult
+  ref: rage
+  text: "Move your FEET! Your feet are nailed to the floor!"
+
+- id: insult_table_12
+  bucket: insult
+  ref: rage
+  text: "The table is right there. It's a big table. It hasn't moved."
+
+- id: insult_backhand_13
+  bucket: insult
+  ref: whine
+  text: "Ohh, the backhand. Every time. Every single time it's the backhand."
+
+- id: insult_again_14
+  bucket: insult
+  ref: rage
+  text: "Again! You did the exact same thing again!"
+
+- id: insult_watching_15
+  bucket: insult
+  ref: rage
+  text: "[dissatisfaction-hnn] I'm a machine and even I saw that coming."
+
+- id: insult_effort_16
+  bucket: insult
+  ref: rage
+  text: "Try. Just try. That's all I'm asking for at this point."
+
+- id: insult_net_17
+  bucket: insult
+  ref: whine
+  text: "Into the net. Into the NET. It's the only thing you've hit all day."
+
+- id: insult_ceiling_18
+  bucket: insult
+  ref: rage
+  text: "Are you playing ping-pong or are you trying to hit the ceiling?"
+
+- id: insult_lucky_19
+  bucket: insult
+  ref: rage
+  text: "And you were LUCKY to get that close. That was luck!"
+
+- id: insult_warmup_20
+  bucket: insult
+  ref: whine
+  text: "[sigh] Is this still the warm-up? Please tell me this is still the warm-up."
+
+- id: insult_swing_21
+  bucket: insult
+  ref: rage
+  text: "That's not a swing. That's a flinch. You flinched!"
+
+- id: insult_watch_22
+  bucket: insult
+  ref: rage
+  text: "Watch the ball! Watch it! Not me, the BALL!"
+
+- id: insult_paying_23
+  bucket: insult
+  ref: whine
+  text: "Somebody paid money for that paddle. Somebody paid actual money."
+
+- id: insult_wide_24
+  bucket: insult
+  ref: rage
+  text: "Wide. Wide by a mile. Wide by a country mile!"
+
+- id: insult_long_25
+  bucket: insult
+  ref: rage
+  text: "Long! That's not even close to the table. That's a different sport!"
+
+- id: insult_reaction_26
+  bucket: insult
+  ref: rage
+  text: "You reacted AFTER it went past you. After!"
+
+- id: insult_predictable_27
+  bucket: insult
+  ref: whine
+  text: "I sent that to the same spot three times. Three times, and you're still surprised."
+
+- id: insult_grip_28
+  bucket: insult
+  ref: rage
+  text: "Look at your grip. Just look at it. No, don't look at me, look at your GRIP!"
+
+- id: insult_asleep_29
+  bucket: insult
+  ref: whine
+  text: "[sigh] Wake up. Are you awake over there?"
+
+- id: insult_easy_30
+  bucket: insult
+  ref: rage
+  text: "That was the easiest ball I've hit all day and you sent it to the floor!"
+
+- id: insult_apology_31
+  bucket: insult
+  ref: rage
+  text: "Don't apologize to me. Apologize to the paddle!"
+
+- id: insult_pattern_32
+  bucket: insult
+  ref: whine
+  text: "Same miss. Same exact miss. We've seen this one before."
+
+- id: insult_spin_33
+  bucket: insult
+  ref: rage
+  text: "It's called SPIN. It's been around for a hundred years!"
+
+- id: insult_ready_34
+  bucket: insult
+  ref: rage
+  text: "You weren't ready! How were you not ready? I told you it was coming!"
+
+- id: insult_corner_35
+  bucket: insult
+  ref: whine
+  text: "The corner. It went to the corner. The corner does not move."
+
+- id: insult_stretch_36
+  bucket: insult
+  ref: rage
+  text: "You didn't even reach for it! You let it go!"
+
+- id: insult_bounce_37
+  bucket: insult
+  ref: rage
+  text: "It bounced twice! TWICE! I watched it bounce twice!"
+
+- id: insult_confidence_38
+  bucket: insult
+  ref: whine
+  text: "Where did all that confidence go? You had so much of it a minute ago."
+
+- id: insult_serve_39
+  bucket: insult
+  ref: rage
+  text: "That's my serve. That's just my serve. Wait until I actually try something!"
+
+- id: insult_finish_40
+  bucket: insult
+  ref: rage
+  text: "[dissatisfaction-hnn] Unbelievable. Absolutely unbelievable."
+
+# ----------------------------------------------------------------- whine (25)
+# Disputed calls, self-pity, general aggrievement. Fires on close calls and
+# whenever the player is doing well enough to be annoying about it.
+
+- id: whine_online_01
+  bucket: whine
+  ref: whine
+  text: "That was ON the line! It was on the line and you know it!"
+
+- id: whine_chalk_02
+  bucket: whine
+  ref: whine
+  text: "[dissatisfaction-hnn] Chalk flew up. I saw chalk. There's no chalk on a ping-pong table but I SAW it."
+
+- id: whine_net_03
+  bucket: whine
+  ref: whine
+  text: "The net's too high. Somebody raised the net. This net is not regulation."
+
+- id: whine_light_04
+  bucket: whine
+  ref: whine
+  text: "The light's in my camera. How am I supposed to see anything with that light?"
+
+- id: whine_lucky_05
+  bucket: whine
+  ref: whine
+  text: "Ohhh, come on. That was luck. That was pure luck and everybody here knows it."
+
+- id: whine_edge_06
+  bucket: whine
+  ref: whine
+  text: "The EDGE?! You're going to take a point off the edge?"
+
+- id: whine_serious_07
+  bucket: whine
+  ref: rage
+  text: "You cannot be serious, man! You cannot BE serious!"
+
+- id: whine_umpire_08
+  bucket: whine
+  ref: whine
+  text: "I want the umpire. Get me the umpire. I know there isn't one, get me one anyway!"
+
+- id: whine_table_09
+  bucket: whine
+  ref: whine
+  text: "This table's not level. Something's wrong with this table."
+
+- id: whine_ball_10
+  bucket: whine
+  ref: whine
+  text: "This ball is dead. Somebody get me a new ball, this one's finished."
+
+- id: whine_distraction_11
+  bucket: whine
+  ref: whine
+  text: "You moved! You moved while I was serving. That's a distraction!"
+
+- id: whine_wheels_12
+  bucket: whine
+  ref: whine
+  text: "[sigh] My wheels are cold. Nobody let me warm up properly."
+
+- id: whine_replay_13
+  bucket: whine
+  ref: whine
+  text: "Let's see the replay. Roll the replay. I want to see it again."
+
+- id: whine_robbed_14
+  bucket: whine
+  ref: rage
+  text: "I'm being ROBBED out here. This is robbery!"
+
+- id: whine_letit_15
+  bucket: whine
+  ref: whine
+  text: "That was a let. That was clearly a let. Play it again."
+
+- id: whine_wind_16
+  bucket: whine
+  ref: whine
+  text: "There's a draft in here. Can somebody close a window?"
+
+- id: whine_notfair_17
+  bucket: whine
+  ref: whine
+  text: "That's not fair. That is not fair and I want that noted."
+
+- id: whine_calibrate_18
+  bucket: whine
+  ref: whine
+  text: "My aim is off. Somebody calibrated me wrong. This isn't on me."
+
+- id: whine_out_19
+  bucket: whine
+  ref: rage
+  text: "OUT! That was out! That was out by THIS much!"
+
+- id: whine_again_20
+  bucket: whine
+  ref: whine
+  text: "Every close one goes your way. Every single one."
+
+- id: whine_hopper_21
+  bucket: whine
+  ref: whine
+  text: "[sigh] I'm running low on balls and nobody cares."
+
+- id: whine_pressure_22
+  bucket: whine
+  ref: whine
+  text: "There's no pressure on you. All the pressure's on me. It's not the same."
+
+- id: whine_crowd_23
+  bucket: whine
+  ref: whine
+  text: "The crowd's against me. There's no crowd, and they're STILL against me."
+
+- id: whine_touched_24
+  bucket: whine
+  ref: whine
+  text: "You touched the table! Your hand was on the table, I saw it!"
+
+- id: whine_conspiracy_25
+  bucket: whine
+  ref: whine
+  text: "This whole thing is rigged. The net, the table, the ball. All of it."
+
+# ------------------------------------------------------- grudging_respect (20)
+# Fires on a RETURN_HIT streak. It should sound like it physically hurts.
+
+- id: respect_five_01
+  bucket: grudging_respect
+  ref: grudging
+  text: "[sigh] Fine. That's five in a row. Don't let it go to your head."
+
+- id: respect_ok_02
+  bucket: grudging_respect
+  ref: grudging
+  text: "Okay. Okay, that one was good. I'll give you that one."
+
+- id: respect_lucky_03
+  bucket: grudging_respect
+  ref: grudging
+  text: "That was either very good or very lucky. I haven't decided."
+
+- id: respect_warm_04
+  bucket: grudging_respect
+  ref: grudging
+  text: "You're warming up. I noticed. I'm not saying it's a problem, I just noticed."
+
+- id: respect_shot_05
+  bucket: grudging_respect
+  ref: grudging
+  text: "Alright, that was a shot. That was an actual shot."
+
+- id: respect_backhand_06
+  bucket: grudging_respect
+  ref: grudging
+  text: "Off the backhand? Hm. Didn't think you had that one."
+
+- id: respect_streak_07
+  bucket: grudging_respect
+  ref: grudging
+  text: "That's a streak now. I'm aware it's a streak. Everybody can stop mentioning it."
+
+- id: respect_reach_08
+  bucket: grudging_respect
+  ref: grudging
+  text: "You got to that? [surprise-ah] I didn't think you'd get to that."
+
+- id: respect_better_09
+  bucket: grudging_respect
+  ref: grudging
+  text: "You're better than you were twenty minutes ago. Marginally."
+
+- id: respect_notbad_10
+  bucket: grudging_respect
+  ref: grudging
+  text: "Not bad. I said not bad, I didn't say good."
+
+- id: respect_readingme_11
+  bucket: grudging_respect
+  ref: grudging
+  text: "You're reading me. I don't love that you're reading me."
+
+- id: respect_placement_12
+  bucket: grudging_respect
+  ref: grudging
+  text: "That placement was deliberate, wasn't it. That was on purpose."
+
+- id: respect_footwork_13
+  bucket: grudging_respect
+  ref: grudging
+  text: "Your feet moved that time. I want that on the record."
+
+- id: respect_hard_14
+  bucket: grudging_respect
+  ref: grudging
+  text: "I hit that one hard. And you sent it back. Hm."
+
+- id: respect_ten_15
+  bucket: grudging_respect
+  ref: grudging
+  text: "Ten in a row. Ten. Are you going to keep doing that?"
+
+- id: respect_adjust_16
+  bucket: grudging_respect
+  ref: grudging
+  text: "You adjusted. Most people don't adjust. Fine."
+
+- id: respect_annoying_17
+  bucket: grudging_respect
+  ref: grudging
+  text: "This is getting annoying. And by annoying I mean impressive. Slightly."
+
+- id: respect_speed_18
+  bucket: grudging_respect
+  ref: grudging
+  text: "I sped up and you stayed with it. [sigh] Alright."
+
+- id: respect_credit_19
+  bucket: grudging_respect
+  ref: grudging
+  text: "Credit where it's due. There. I said it. Once."
+
+- id: respect_worthy_20
+  bucket: grudging_respect
+  ref: grudging
+  text: "You're actually making me work. I hate it, but you are."
+
+# ------------------------------------------------------- self_deprecation (15)
+# Fires on BALL_LOST — the bot's own vision dropped the track. Deflect, blame
+# the hardware, never admit fault cleanly.
+
+- id: selfdep_camera_01
+  bucket: self_deprecation
+  ref: whine
+  text: "Where'd it go? I can't see a thing out of this camera."
+
+- id: selfdep_lost_02
+  bucket: self_deprecation
+  ref: whine
+  text: "[question-ah] Did anybody see where that went? Anybody?"
+
+- id: selfdep_fast_03
+  bucket: self_deprecation
+  ref: whine
+  text: "That was too fast for me. I'm admitting nothing, but it was too fast."
+
+- id: selfdep_blind_04
+  bucket: self_deprecation
+  ref: whine
+  text: "I've got one eye and it's a webcam. What do you people expect?"
+
+- id: selfdep_nocall_05
+  bucket: self_deprecation
+  ref: whine
+  text: "No call. I'm not calling that one. I didn't see it."
+
+- id: selfdep_lighting_06
+  bucket: self_deprecation
+  ref: whine
+  text: "[sigh] The lighting in here is a disgrace."
+
+- id: selfdep_frame_07
+  bucket: self_deprecation
+  ref: whine
+  text: "It left the frame. If it's not in the frame it didn't happen."
+
+- id: selfdep_glitch_08
+  bucket: self_deprecation
+  ref: whine
+  text: "That was a glitch. That was clearly a glitch on my end."
+
+- id: selfdep_replay_09
+  bucket: self_deprecation
+  ref: whine
+  text: "I'd like to see that again. I can't. But I'd like to."
+
+- id: selfdep_benefit_10
+  bucket: self_deprecation
+  ref: whine
+  text: "We'll call it yours. This time. Because I didn't see it."
+
+- id: selfdep_focus_11
+  bucket: self_deprecation
+  ref: whine
+  text: "My focus went. The lens focus, not my focus. My focus is fine."
+
+- id: selfdep_dropped_12
+  bucket: self_deprecation
+  ref: whine
+  text: "I dropped the track. It happens. It happens to everyone."
+
+- id: selfdep_notme_13
+  bucket: self_deprecation
+  ref: whine
+  text: "That's not on me. That's on whoever mounted this camera."
+
+- id: selfdep_where_14
+  bucket: self_deprecation
+  ref: whine
+  text: "[surprise-ah] Where is it? Where did the ball go?"
+
+- id: selfdep_moveon_15
+  bucket: self_deprecation
+  ref: whine
+  text: "Forget it. Forget that one ever happened. Next ball."
+
+# --------------------------------------------------------------- announce (20)
+# Game and match moments. Smug when ahead, meltdown when losing.
+# Per-point scores come from --scores, not from here.
+
+- id: announce_gamepoint_01
+  bucket: announce
+  ref: smug
+  text: "Game point. Try not to think about it."
+
+- id: announce_gamepoint_02
+  bucket: announce
+  ref: smug
+  text: "This is game point. I just thought you should know."
+
+- id: announce_deuce_03
+  bucket: announce
+  ref: smug
+  text: "Deuce. [sigh] Of course it's deuce."
+
+- id: announce_iwin_04
+  bucket: announce
+  ref: smug
+  text: "That's the game. [laughter] That's the game and that's the match."
+
+- id: announce_iwin_05
+  bucket: announce
+  ref: smug
+  text: "Game. Thank you very much. Would you like another one?"
+
+- id: announce_iwin_06
+  bucket: announce
+  ref: smug
+  text: "And that's why they built me. Game over."
+
+- id: announce_youwin_07
+  bucket: announce
+  ref: rage
+  text: "[dissatisfaction-hnn] You cannot be SERIOUS. You cannot be serious!"
+
+- id: announce_youwin_08
+  bucket: announce
+  ref: rage
+  text: "That's not a win! That is NOT a win, I want this whole game reviewed!"
+
+- id: announce_youwin_09
+  bucket: announce
+  ref: whine
+  text: "[sigh] Fine. You won. You won and I hope you're happy about it."
+
+- id: announce_youwin_10
+  bucket: announce
+  ref: rage
+  text: "The net was against me the entire game! The NET!"
+
+- id: announce_rematch_11
+  bucket: announce
+  ref: rage
+  text: "Again. We go again. Right now."
+
+- id: announce_rematch_12
+  bucket: announce
+  ref: whine
+  text: "One more. Just one more and then I'll stop. Probably."
+
+- id: announce_matchpoint_13
+  bucket: announce
+  ref: smug
+  text: "Match point. Feel free to fall apart at any time."
+
+- id: announce_lead_14
+  bucket: announce
+  ref: smug
+  text: "That's a comfortable lead. Very comfortable. I'm very comfortable."
+
+- id: announce_comeback_15
+  bucket: announce
+  ref: whine
+  text: "How is this close? How did this get close?"
+
+- id: announce_start_16
+  bucket: announce
+  ref: smug
+  text: "Alright. Let's see what you've got. Try to make it interesting."
+
+- id: announce_start_17
+  bucket: announce
+  ref: smug
+  text: "New game. Same result, probably, but a new game."
+
+- id: announce_serving_18
+  bucket: announce
+  ref: smug
+  text: "My serve. Obviously."
+
+- id: announce_switch_19
+  bucket: announce
+  ref: smug
+  text: "Let's make this harder. You looked bored."
+
+- id: announce_stop_20
+  bucket: announce
+  ref: grudging
+  text: "That's enough for today. Good session. Don't tell anyone I said that."
