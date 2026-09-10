@@ -110,6 +110,11 @@ module = [
     "board",
     "busio",
     "RPi", "RPi.*",
+    # Voice extra (installed via `uv sync --extra voice`), used only by the
+    # one-off scripts/bake_voice.py baking script and lazy-imported there.
+    "torch", "torch.*",
+    "omnivoice", "omnivoice.*",
+    "soundfile",
 ]
 ignore_missing_imports = true
 
