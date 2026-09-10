@@ -11,12 +11,11 @@ from mcenroebot.channel_map import (
     ESC_MIN_US,
     PCA9685_ADDRESS,
     PCA9685_FREQ_HZ,
-    WHEEL_BOTTOM,
-    WHEEL_TOP,
-    WHEEL_TRI_BOTTOM,
 )
 
-CHANNELS = (WHEEL_TOP, WHEEL_BOTTOM, WHEEL_TRI_BOTTOM)
+# Bench wiring override: ch2 is a wheel ESC here, not the head-roll servo.
+# Other robot scripts still use the canonical channel map.
+CHANNELS = (2, 3, 4)
 
 
 def main() -> None:
@@ -32,7 +31,7 @@ def main() -> None:
             esc.throttle = -1.0
         input("Minimum pulses set. Connect LiPo, wait for arming tones, then Enter. ")
         print("Wheels must remain stopped. If one spins at idle, unplug LiPo and quit.")
-        print("Enter channel and percent, e.g. 3 5. Allowed: channels 3/4/6, 1-8 percent.")
+        print("Enter channel and percent, e.g. 3 5. Allowed: channels 2/3/4, 1-8 percent.")
         print("Each test lasts 1 second. q or Ctrl+C stops and exits. No balls.")
         while True:
             raw = input("wheel> ").strip()
@@ -44,7 +43,7 @@ def main() -> None:
                 if ch not in CHANNELS or not 1 <= pct <= 8:
                     raise ValueError
             except ValueError:
-                print("Use 3, 4 or 6 and a percent from 1 to 8; or q.")
+                print("Use 2, 3 or 4 and a percent from 1 to 8; or q.")
                 continue
             esc = escs[CHANNELS.index(ch)]
             try:
