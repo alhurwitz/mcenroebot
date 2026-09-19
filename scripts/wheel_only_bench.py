@@ -2,7 +2,8 @@
 
 No feeder commands. Start with LiPo disconnected and an empty, guarded rig.
 Individual wheel tests last one second; 'all' runs all wheels for five seconds.
-Each run then disables all three wheel signals and exits. Restart to re-arm.
+Each run returns to minimum throttle and keeps the command prompt open.
+Typing q or pressing Ctrl+C disables all three wheel signals and exits.
 """
 
 import time
@@ -37,7 +38,8 @@ def main() -> int:
         print("Individual tests: 1 second, no balls. 'all 5': all wheels at 5% for 5 seconds.")
         print("For a launch: one ball through the guarded chute after the FEED message.")
         print("Ctrl+C interrupts a running test. q exits at the prompt.")
-        print("Shutdown v2: each completed test switches OFF all wheel PWM and exits.")
+        print("After each test: minimum throttle, then the wheel prompt stays open.")
+        print("q or Ctrl+C switches OFF all three wheel PWM signals and exits.")
         while True:
             raw = input("wheel> ").strip()
             if raw.lower() == "q":
@@ -52,21 +54,23 @@ def main() -> int:
                 print("Use 2, 3, 4 or all and a percent from 1 to 8; or q.")
                 continue
             selected = escs if ch is None else [escs[CHANNELS.index(ch)]]
-            for esc in selected:
-                esc.throttle = -1.0 + 2.0 * pct / 100.0
-            if ch is None:
-                print("Spinning up all three wheels...", flush=True)
-                time.sleep(2.0)
-                print(
-                    "FEED ONE BALL only if all three spin smoothly. Stopping in 3 seconds.",
-                    flush=True,
-                )
-                time.sleep(3.0)
-            else:
-                time.sleep(1.0)
-            # Minimum throttle did not stop one ESC on this rig. End the run
-            # and cut pulses instead of leaving it armed at the next prompt.
-            break
+            try:
+                for esc in selected:
+                    esc.throttle = -1.0 + 2.0 * pct / 100.0
+                if ch is None:
+                    print("Spinning up all three wheels...", flush=True)
+                    time.sleep(2.0)
+                    print(
+                        "FEED ONE BALL only if all three spin smoothly. Stopping in 3 seconds.",
+                        flush=True,
+                    )
+                    time.sleep(3.0)
+                else:
+                    time.sleep(1.0)
+            finally:
+                for esc in selected:
+                    esc.throttle = -1.0
+            print("Back at minimum. Enter another test or q to switch PWM off and exit.")
     except (KeyboardInterrupt, EOFError):
         print("\nStopping.")
     except Exception as exc:

@@ -52,12 +52,11 @@ def rig(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, dict[int, PWM]]:
     return bench, outputs
 
 
-@pytest.mark.parametrize("command", ["q", "3 5", "all 5"])
-def test_quit_and_completed_tests_disable_all_pwm(
-    rig: tuple[Any, dict[int, PWM]], monkeypatch: pytest.MonkeyPatch, command: str
+def test_completed_tests_return_to_prompt_at_minimum_until_quit(
+    rig: tuple[Any, dict[int, PWM]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bench, outputs = rig
-    replies = iter(["", command])
+    replies = iter(["", "3 5", "2 6", "all 5", "q"])
     prompts = []
 
     def read(prompt: str) -> str:
@@ -71,9 +70,14 @@ def test_quit_and_completed_tests_disable_all_pwm(
     monkeypatch.setattr(bench.time, "sleep", lambda seconds: None)
     bench.main()
     assert [outputs[ch].duty_cycle for ch in (2, 3, 4)] == [0, 0, 0]
-    expected_spinning = {"q": [], "3 5": [3], "all 5": [2, 3, 4]}[command]
-    assert [ch for ch in (2, 3, 4) if max(outputs[ch].values) > 3276] == expected_spinning
-    assert len(prompts) == 2, "A completed run must disable signals and exit, not stay armed"
+    assert [ch for ch in (2, 3, 4) if max(outputs[ch].values) > 3276] == [2, 3, 4]
+    assert len(prompts) == 5, "Each completed test must return to the wheel prompt"
+    for pwm in outputs.values():
+        # Every nonzero spin command is followed by minimum throttle before
+        # the final signal-off write performed by q.
+        spin_indexes = [i for i, value in enumerate(pwm.values) if value > 3276]
+        assert spin_indexes
+        assert all(pwm.values[i + 1] == 3276 for i in spin_indexes)
 
 
 def test_interrupt_during_launch_disables_all_pwm(
