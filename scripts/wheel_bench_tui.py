@@ -134,7 +134,7 @@ class WheelBenchApp(App[int]):
     #panel { width: 72; height: auto; border: round $primary; padding: 1 2; }
     #title { text-align: center; text-style: bold; background: $primary; color: $text; }
     #state { text-align: center; text-style: bold; margin: 1 0; color: $warning; }
-    .field { width: 1fr; margin: 0 1; }
+    .field { width: 1fr; height: auto; margin: 0 1; }
     .field Label { color: $text-muted; }
     #controls { height: auto; margin: 1 0; }
     #buttons { height: auto; align-horizontal: center; }
@@ -143,8 +143,8 @@ class WheelBenchApp(App[int]):
     #safety { color: $error; text-style: bold; text-align: center; }
     """
     BINDINGS: ClassVar = [
-        Binding("r", "run_test", "Run"),
-        Binding("s", "stop_test", "Stop"),
+        Binding("r", "run_test", "Run", priority=True),
+        Binding("s", "stop_test", "Stop", priority=True),
         Binding("space", "estop", "E-STOP", priority=True),
         Binding("q", "quit_safe", "Quit", priority=True),
     ]
@@ -182,10 +182,10 @@ class WheelBenchApp(App[int]):
                     yield Input(value="10", type="number", id="seconds")
             with Horizontal(id="buttons"):
                 yield Button("LiPo connected — ARM", id="arm", variant="warning")
-                yield Button("RUN", id="run", variant="success", disabled=True)
-                yield Button("STOP", id="stop")
+                yield Button("START MOTORS", id="run", variant="success", disabled=True)
+                yield Button("STOP MOTORS", id="stop", variant="warning")
                 yield Button("E-STOP + EXIT", id="estop", variant="error")
-            yield Static("Set values, arm, then RUN. STOP keeps the dashboard open.", id="status")
+            yield Static("Set values, arm, then START. STOP keeps the dashboard open.", id="status")
             yield Static("SPACE = E-STOP   •   Q = safe quit   •   keep hands clear", id="safety")
         yield Footer()
 
