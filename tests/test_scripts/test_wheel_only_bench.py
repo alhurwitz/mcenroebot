@@ -44,7 +44,7 @@ def rig(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, dict[int, PWM]]:
     module = ModuleType("adafruit_servokit")
     monkeypatch.setattr(module, "ServoKit", lambda **kwargs: kit, raising=False)
     monkeypatch.setitem(sys.modules, "adafruit_servokit", module)
-    path = Path(__file__).resolve().parents[1] / "scripts" / "wheel_only_bench.py"
+    path = Path(__file__).resolve().parents[2] / "scripts" / "wheel_only_bench.py"
     spec = importlib.util.spec_from_file_location("wheel_bench_under_test", path)
     assert spec is not None and spec.loader is not None
     bench = importlib.util.module_from_spec(spec)
@@ -96,6 +96,32 @@ def test_interrupt_during_launch_disables_all_pwm(
     assert [outputs[ch].duty_cycle for ch in (2, 3, 4)] == [0, 0, 0]
 
 
+def test_optional_duration_controls_individual_and_all_run_times(
+    rig: tuple[Any, dict[int, PWM]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bench, outputs = rig
+    replies = iter(["", "2 5 3", "all 5 10", "q"])
+    sleeps = []
+    monkeypatch.setattr("builtins.input", lambda prompt: next(replies))
+    monkeypatch.setattr(bench.time, "sleep", sleeps.append)
+    assert bench.main() == 0
+    assert sleeps == [3.0, 2.0, 8.0]
+    assert [outputs[ch].duty_cycle for ch in (2, 3, 4)] == [0, 0, 0]
+
+
+def test_default_durations_remain_one_and_five_seconds(
+    rig: tuple[Any, dict[int, PWM]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bench, outputs = rig
+    replies = iter(["", "2 5", "all 5", "q"])
+    sleeps = []
+    monkeypatch.setattr("builtins.input", lambda prompt: next(replies))
+    monkeypatch.setattr(bench.time, "sleep", sleeps.append)
+    assert bench.main() == 0
+    assert sleeps == [1.0, 2.0, 3.0]
+    assert [outputs[ch].duty_cycle for ch in (2, 3, 4)] == [0, 0, 0]
+
+
 def test_one_failed_shutdown_write_does_not_skip_other_wheels(
     rig: tuple[Any, dict[int, PWM]],
     monkeypatch: pytest.MonkeyPatch,
@@ -116,7 +142,23 @@ def test_invalid_commands_never_start_a_wheel(
     rig: tuple[Any, dict[int, PWM]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bench, outputs = rig
-    replies = iter(["", "5 5", "6 5", "all 9", "all nan", "all inf", "all -1", "q"])
+    replies = iter(
+        [
+            "",
+            "5 5",
+            "6 5",
+            "all 9",
+            "all nan",
+            "all inf",
+            "all -1",
+            "all 5 0",
+            "all 5 31",
+            "all 5 nan",
+            "all 5 inf",
+            "2 5 3 extra",
+            "q",
+        ]
+    )
     monkeypatch.setattr("builtins.input", lambda prompt: next(replies))
     monkeypatch.setattr(bench.time, "sleep", lambda seconds: None)
     assert bench.main() == 0

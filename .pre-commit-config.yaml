@@ -34,8 +34,8 @@ repos:
     hooks:
       - id: mypy
         # mypy is scoped to src/ (see CLAUDE.md). Exclude one-off docs scripts
-        # like the trimesh-based STL generator, which aren't project code.
-        exclude: ^docs/
+        # like the trimesh-based STL generator, which aren't project code, plus tests and scripts.
+        exclude: ^(docs|tests|scripts)/
         additional_dependencies:
           - pydantic>=2.6
           - types-PyYAML>=6.0

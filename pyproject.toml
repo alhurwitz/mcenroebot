@@ -62,84 +62,10 @@ python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
 mypy_path = "src"
-
-[[tool.mypy.overrides]]
-module = "tests.*"
-disallow_untyped_defs = false
+files = ["src/mcenroebot"]
+exclude = ["^tests/", "^scripts/"]
+# Ignore all missing third-party stubs globally.
 ignore_missing_imports = true
-disable_error_code = ["type-arg", "misc", "unused-ignore"]
-
-[[tool.mypy.overrides]]
-module = [
-    "aiosqlite",
-    "fastembed",
-    "numpy",
-    "numpy.testing",
-    "numpy.typing",
-    "cv2",
-    "anthropic", "anthropic.*",
-    "openai", "openai.*",
-    "trafilatura", "trafilatura.*",
-    "exa_py", "exa_py.*",
-    "tiktoken", "tiktoken.*",
-    # Phase 2: LocalFiles backend optional deps (no type stubs available)
-    "fitz", "fitz.*",
-    "xxhash",
-    "pathspec", "pathspec.*",
-    "tree_sitter", "tree_sitter.*",
-    "tree_sitter_python",
-    "tree_sitter_javascript",
-    "tree_sitter_typescript",
-    # Phase 7: Framework adapter deps (no type stubs available)
-    "langchain_core", "langchain_core.*",
-    "langgraph", "langgraph.*",
-    "llama_index", "llama_index.*",
-    "agents", "agents.*",
-    "claude_agent_sdk", "claude_agent_sdk.*",
-    "pydantic_ai", "pydantic_ai.*",
-    "crewai", "crewai.*",
-    "autogen_agentchat", "autogen_agentchat.*",
-    # Phase 8: MCP SDK and uvicorn (no type stubs in pre-commit env)
-    "mcp", "mcp.*",
-    "uvicorn", "uvicorn.*",
-    # Pi-only Adafruit hardware libraries (installed via `uv sync --extra pi`).
-    # On the dev Mac these are absent, so mypy can't resolve them — that's fine,
-    # the real driver code is lazy-imported and gated.
-    "adafruit_servokit",
-    "adafruit_pca9685",
-    "board",
-    "busio",
-    "RPi", "RPi.*",
-    # Voice extra (installed via `uv sync --extra voice`), used only by the
-    # one-off scripts/bake_voice.py baking script and lazy-imported there.
-    "torch", "torch.*",
-    "omnivoice", "omnivoice.*",
-    "soundfile",
-]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = [
-    "mcenroebot.langchain",
-    "mcenroebot.langchain.*",
-    "mcenroebot.langgraph",
-    "mcenroebot.langgraph.*",
-    "mcenroebot.llamaindex",
-    "mcenroebot.llamaindex.*",
-    "mcenroebot.openai_agents",
-    "mcenroebot.openai_agents.*",
-    "mcenroebot.claude_agent",
-    "mcenroebot.claude_agent.*",
-    "mcenroebot.pydantic_ai",
-    "mcenroebot.pydantic_ai.*",
-    "mcenroebot.crewai",
-    "mcenroebot.crewai.*",
-    "mcenroebot.autogen",
-    "mcenroebot.autogen.*",
-]
-# Framework adapters subclass from externally-typed bases that lack stubs;
-# misc/unused-ignore/no-any-return suppressed because import resolution differs by env.
-disable_error_code = ["misc", "unused-ignore", "no-any-return"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
