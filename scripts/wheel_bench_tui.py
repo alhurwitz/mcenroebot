@@ -21,10 +21,21 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Input, Label, Select, Static
 
-from mcenroebot.channel_map import ESC_MAX_US, ESC_MIN_US, PCA9685_ADDRESS, PCA9685_FREQ_HZ
+from mcenroebot.channel_map import (
+    ESC_MAX_US,
+    ESC_MIN_US,
+    FEED_MAX_US,
+    FEED_MIN_US,
+    FEED_SERVO,
+    PCA9685_ADDRESS,
+    PCA9685_FREQ_HZ,
+)
 
 CHANNELS = (2, 3, 4)
 TARGETS = {"all", *(str(channel) for channel in CHANNELS)}
+FEED_LOAD_ANGLE = 130.0
+FEED_DISCHARGE_ANGLE = 10.0
+FEED_DWELL_SECONDS = 0.6
 
 
 class RunRequest(NamedTuple):
@@ -46,6 +57,7 @@ class WheelRig:
         self.dry_run = dry_run
         if dry_run:
             self._escs: dict[int, Any] = {}
+            self._feed: Any = None
             return
         if kit is None:
             from adafruit_servokit import ServoKit
@@ -54,6 +66,8 @@ class WheelRig:
         self._escs = {channel: kit.continuous_servo[channel] for channel in CHANNELS}
         for esc in self._escs.values():
             esc.set_pulse_width_range(ESC_MIN_US, ESC_MAX_US)
+        self._feed = kit.servo[FEED_SERVO]
+        self._feed.set_pulse_width_range(FEED_MIN_US, FEED_MAX_US)
 
     def minimum_all(self) -> None:
         if self.dry_run:
@@ -82,6 +96,14 @@ class WheelRig:
             except Exception as exc:
                 failures.append(f"ch{channel}: {exc}")
         return failures
+
+    def feed_load(self) -> None:
+        if not self.dry_run:
+            self._feed.angle = FEED_LOAD_ANGLE
+
+    def feed_discharge(self) -> None:
+        if not self.dry_run:
+            self._feed.angle = FEED_DISCHARGE_ANGLE
 
 
 def parse_run(target: str, percent_text: str, seconds_text: str) -> RunRequest:
@@ -137,7 +159,7 @@ class WheelBenchApp(App[int]):
     .field { width: 1fr; height: auto; margin: 0 1; }
     .field Label { color: $text-muted; }
     #controls { height: auto; margin: 1 0; }
-    #buttons { height: auto; align-horizontal: center; }
+    .buttons { height: auto; align-horizontal: center; }
     Button { margin: 0 1; }
     #status { height: 3; margin-top: 1; text-align: center; color: $accent; }
     #safety { color: $error; text-style: bold; text-align: center; }
@@ -154,7 +176,9 @@ class WheelBenchApp(App[int]):
         self.rig = rig
         self.armed = False
         self._run_task: asyncio.Task[None] | None = None
+        self._feed_task: asyncio.Task[None] | None = None
         self._shutdown_done = False
+        self.balls_fired = 0
 
     def compose(self) -> ComposeResult:
         dry = " — DRY RUN" if self.rig.dry_run else ""
@@ -180,10 +204,12 @@ class WheelBenchApp(App[int]):
                 with Vertical(classes="field"):
                     yield Label("SECONDS  (1-30)")
                     yield Input(value="10", type="number", id="seconds")
-            with Horizontal(id="buttons"):
+            with Horizontal(classes="buttons"):
                 yield Button("LiPo connected — ARM", id="arm", variant="warning")
                 yield Button("START MOTORS", id="run", variant="success", disabled=True)
                 yield Button("STOP MOTORS", id="stop", variant="warning")
+            with Horizontal(classes="buttons"):
+                yield Button("FIRE ONE BALL", id="fire", variant="primary", disabled=True)
                 yield Button("E-STOP + EXIT", id="estop", variant="error")
             yield Static("Set values, arm, then START. STOP keeps the dashboard open.", id="status")
             yield Static("SPACE = E-STOP   •   Q = safe quit   •   keep hands clear", id="safety")
@@ -191,6 +217,7 @@ class WheelBenchApp(App[int]):
 
     def on_mount(self) -> None:
         self.rig.minimum_all()
+        self.rig.feed_load()
 
     def _set_status(self, message: str) -> None:
         self.query_one("#status", Static).update(message)
@@ -210,6 +237,8 @@ class WheelBenchApp(App[int]):
             self.action_run_test()
         elif button_id == "stop":
             self.action_stop_test()
+        elif button_id == "fire":
+            self.action_fire()
         elif button_id == "estop":
             self.action_estop()
 
@@ -236,8 +265,13 @@ class WheelBenchApp(App[int]):
         self._run_task = asyncio.create_task(self._run(request))
 
     async def _run(self, request: RunRequest) -> None:
+        def run_status(message: str) -> None:
+            self._set_status(message)
+            if message.startswith("FEED ONE BALL"):
+                self.query_one("#fire", Button).disabled = False
+
         try:
-            await execute_run(self.rig, request, self._set_status)
+            await execute_run(self.rig, request, run_status)
             self._set_state("ARMED — minimum throttle active")
         except asyncio.CancelledError:
             raise
@@ -246,13 +280,46 @@ class WheelBenchApp(App[int]):
             self._set_status(str(exc))
             self._safe_shutdown()
         finally:
+            if self._feed_task is not None and not self._feed_task.done():
+                self._feed_task.cancel()
+            if self.is_mounted:
+                self.query_one("#fire", Button).disabled = True
             if self.is_mounted and self.armed and not self._shutdown_done:
                 self.query_one("#run", Button).disabled = False
+
+    def action_fire(self) -> None:
+        if (
+            self._run_task is None
+            or self._run_task.done()
+            or (self._feed_task is not None and not self._feed_task.done())
+            or self.query_one("#fire", Button).disabled
+        ):
+            return
+        self.query_one("#fire", Button).disabled = True
+        self._feed_task = asyncio.create_task(self._fire_one_ball())
+
+    async def _fire_one_ball(self) -> None:
+        try:
+            self._set_status("DISCHARGING ONE BALL...")
+            self.rig.feed_discharge()
+            await asyncio.sleep(FEED_DWELL_SECONDS)
+            self.rig.feed_load()
+            await asyncio.sleep(FEED_DWELL_SECONDS)
+            self.balls_fired += 1
+            self._set_status(f"BALL {self.balls_fired} FIRED — queue returned to LOAD")
+        finally:
+            self.rig.feed_load()
+            if self.is_mounted and self._run_task is not None and not self._run_task.done():
+                self.query_one("#fire", Button).disabled = False
 
     def action_stop_test(self) -> None:
         if self._run_task is not None and not self._run_task.done():
             self._run_task.cancel()
+        if self._feed_task is not None and not self._feed_task.done():
+            self._feed_task.cancel()
         self.rig.minimum_all()
+        self.rig.feed_load()
+        self.query_one("#fire", Button).disabled = True
         if self.armed:
             self._set_state("ARMED — minimum throttle active")
         self._set_status("STOPPED — ready for another test")
@@ -263,7 +330,10 @@ class WheelBenchApp(App[int]):
         self._shutdown_done = True
         if self._run_task is not None and not self._run_task.done():
             self._run_task.cancel()
+        if self._feed_task is not None and not self._feed_task.done():
+            self._feed_task.cancel()
         self.rig.minimum_all()
+        self.rig.feed_load()
         return self.rig.signal_off()
 
     def action_estop(self) -> None:
