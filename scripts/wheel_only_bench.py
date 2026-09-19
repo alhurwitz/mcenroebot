@@ -1,11 +1,13 @@
 """Run from the Pi repository: uv run python /path/to/wheel_only_bench.py.
 
 No feeder commands. Start with LiPo disconnected and an empty, guarded rig.
-Individual wheel tests last one second; 'all' runs all wheels for five seconds.
+An optional third command value sets the run time from 1 to 30 seconds.
+Without it, individual wheel tests last one second and 'all' lasts five seconds.
 Each run returns to minimum throttle and keeps the command prompt open.
 Typing q or pressing Ctrl+C disables all three wheel signals and exits.
 """
 
+import math
 import time
 
 from mcenroebot.channel_map import (
@@ -34,8 +36,9 @@ def main() -> int:
             esc.throttle = -1.0
         input("Minimum pulses set. Connect LiPo, wait for arming tones, then Enter. ")
         print("Wheels must remain stopped. If one spins at idle, unplug LiPo and quit.")
-        print("Enter channel and percent, e.g. 3 5. Allowed: channels 2/3/4, 1-8 percent.")
-        print("Individual tests: 1 second, no balls. 'all 5': all wheels at 5% for 5 seconds.")
+        print("Enter channel, percent, and optional seconds, e.g. 3 5 10.")
+        print("Allowed: channels 2/3/4, 1-8 percent, and 1-30 seconds.")
+        print("Defaults: individual tests 1 second; 'all 5' runs for 5 seconds.")
         print("For a launch: one ball through the guarded chute after the FEED message.")
         print("Ctrl+C interrupts a running test. q exits at the prompt.")
         print("After each test: minimum throttle, then the wheel prompt stays open.")
@@ -45,13 +48,23 @@ def main() -> int:
             if raw.lower() == "q":
                 break
             try:
-                ch_text, pct_text = raw.split()
+                parts = raw.split()
+                if len(parts) not in (2, 3):
+                    raise ValueError
+                ch_text, pct_text = parts[:2]
                 pct = float(pct_text)
                 ch = None if ch_text.lower() == "all" else int(ch_text)
-                if (ch is not None and ch not in CHANNELS) or not 1 <= pct <= 8:
+                duration = float(parts[2]) if len(parts) == 3 else (5.0 if ch is None else 1.0)
+                if (
+                    (ch is not None and ch not in CHANNELS)
+                    or not math.isfinite(pct)
+                    or not 1 <= pct <= 8
+                    or not math.isfinite(duration)
+                    or not 1 <= duration <= 30
+                ):
                     raise ValueError
-            except ValueError:
-                print("Use 2, 3, 4 or all and a percent from 1 to 8; or q.")
+            except (TypeError, ValueError):
+                print("Use: 2|3|4|all PERCENT [SECONDS]; percent 1-8, seconds 1-30; or q.")
                 continue
             selected = escs if ch is None else [escs[CHANNELS.index(ch)]]
             try:
@@ -59,14 +72,18 @@ def main() -> int:
                     esc.throttle = -1.0 + 2.0 * pct / 100.0
                 if ch is None:
                     print("Spinning up all three wheels...", flush=True)
-                    time.sleep(2.0)
-                    print(
-                        "FEED ONE BALL only if all three spin smoothly. Stopping in 3 seconds.",
-                        flush=True,
-                    )
-                    time.sleep(3.0)
+                    spinup = min(2.0, duration)
+                    time.sleep(spinup)
+                    remaining = duration - spinup
+                    if remaining > 0:
+                        print(
+                            "FEED ONE BALL only if all three spin smoothly. "
+                            f"Stopping in {remaining:g} seconds.",
+                            flush=True,
+                        )
+                        time.sleep(remaining)
                 else:
-                    time.sleep(1.0)
+                    time.sleep(duration)
             finally:
                 for esc in selected:
                     esc.throttle = -1.0
