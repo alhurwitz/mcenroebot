@@ -34,7 +34,7 @@ from mcenroebot.channel_map import (
 CHANNELS = (2, 3, 4)
 TARGETS = {"all", *(str(channel) for channel in CHANNELS)}
 FEED_LOAD_ANGLE = 130.0
-FEED_DISCHARGE_ANGLE = 10.0
+FEED_DISCHARGE_ANGLE = 0.0
 FEED_DWELL_SECONDS = 0.6
 
 
