@@ -121,7 +121,7 @@ class LauncherBench:
         rig: WheelRig,
         *,
         throttle: int = 5,
-        max_throttle: int = 8,
+        max_throttle: int = 100,
         pulse_ms: int = 250,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
