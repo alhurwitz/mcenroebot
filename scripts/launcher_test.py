@@ -208,6 +208,15 @@ class LauncherBench:
         return True
 
 
+class BenchInput(Input):
+    """Keep stop and quit shortcuts available while editing numeric settings."""
+
+    def check_consume_key(self, key: str, character: str | None) -> bool:
+        if key.lower() in ("x", "q", "ctrl+c"):
+            return False
+        return super().check_consume_key(key, character)
+
+
 class LauncherApp(App[int]):
     """The wheel-bench dashboard style with no-queue launcher controls."""
 
@@ -231,8 +240,8 @@ class LauncherApp(App[int]):
     #safety { color: $error; text-style: bold; text-align: center; }
     """
     BINDINGS: ClassVar = [
-        Binding("x", "stop_test", "STOP", priority=True),
-        Binding("q", "quit_safe", "Quit", priority=True),
+        Binding("x,X", "stop_test", "STOP", priority=True),
+        Binding("q,Q", "quit_safe", "Quit", priority=True),
         Binding("ctrl+c", "quit_safe", "Quit", priority=True, show=False),
         Binding("space", "pulse_all", "Pulse all", priority=True),
     ]
@@ -250,10 +259,10 @@ class LauncherApp(App[int]):
             with Horizontal(id="controls"):
                 with Vertical(classes="field"):
                     yield Label(f"THROTTLE % (0-{self.bench.max_throttle})")
-                    yield Input(str(self.bench.throttle), type="integer", id="percent")
+                    yield BenchInput(str(self.bench.throttle), type="integer", id="percent")
                 with Vertical(classes="field"):
                     yield Label("PULSE MS (25-5000)")
-                    yield Input(str(self.bench.pulse_ms), type="integer", id="pulse-ms")
+                    yield BenchInput(str(self.bench.pulse_ms), type="integer", id="pulse-ms")
                 yield Button("APPLY", id="apply", variant="primary")
             with Horizontal(classes="buttons"):
                 yield Button("LiPo connected — ARM", id="arm", variant="warning")
