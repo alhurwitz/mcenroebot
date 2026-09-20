@@ -220,7 +220,7 @@ def test_main_cleans_up_after_ui_failure(bench_module, hardware, monkeypatch, fa
     def fail(*args):
         raise failure
 
-    monkeypatch.setattr(bench_module.curses, "wrapper", fail)
+    monkeypatch.setattr(bench_module.LauncherApp, "run", fail)
     assert bench_module.main([]) == (130 if isinstance(failure, KeyboardInterrupt) else 1)
     assert duties(outputs) == [0, 0, 0]
     assert released == ["pca", "bus"]
@@ -256,9 +256,58 @@ def test_dry_run_does_not_import_hardware(bench_module, monkeypatch):
     monkeypatch.setitem(sys.modules, "board", None)
     monkeypatch.setitem(sys.modules, "adafruit_pca9685", None)
 
-    def rehearse(callback, controller):
-        assert controller.rig.dry_run
-        assert controller.handle_key(ord("q")) is False
+    def rehearse(app):
+        assert app.bench.rig.dry_run
+        assert app.bench.handle_key(ord("q")) is False
 
-    monkeypatch.setattr(bench_module.curses, "wrapper", rehearse)
+    monkeypatch.setattr(bench_module.LauncherApp, "run", rehearse)
     assert bench_module.main(["--dry-run"]) == 0
+
+
+async def test_dashboard_buttons_settings_and_stop(bench_module, control):
+    from textual.widgets import Input
+
+    controller, outputs, now = control
+    app = bench_module.LauncherApp(controller)
+    async with app.run_test(size=(100, 45)) as pilot:
+        await pilot.click("#arm")
+        now[0] += 3.1
+        await pilot.pause()
+        await pilot.click("#toggle-0")
+        await pilot.click("#toggle-1")
+        await pilot.click("#pulse-2")
+        assert duties(outputs) == [3440, 3440, 3440]
+        now[0] += 0.3
+        await pilot.pause()
+        assert duties(outputs) == [3440, 3440, 3276]
+        app.query_one("#percent", Input).value = "6"
+        app.query_one("#pulse-ms", Input).value = "500"
+        await pilot.click("#apply")
+        assert controller.throttle == 6 and controller.pulse_ms == 500
+        assert duties(outputs) == [3473, 3473, 3276]
+        await pilot.click("#good")
+        assert controller.stats["good"] == 1
+        app.query_one("#percent", Input).focus()
+        await pilot.press("x")
+        assert duties(outputs) == [0, 0, 0]
+        assert not controller.armed
+    assert duties(outputs) == [0, 0, 0]
+
+
+async def test_dashboard_rejects_invalid_settings_and_cleans_up_on_exit(bench_module, control):
+    from textual.widgets import Input
+
+    controller, outputs, now = control
+    app = bench_module.LauncherApp(controller)
+    async with app.run_test(size=(100, 45)) as pilot:
+        app.query_one("#percent", Input).value = "99"
+        await pilot.click("#apply")
+        assert controller.throttle == 5
+        assert "INVALID" in controller.last_action
+        await pilot.click("#arm")
+        now[0] += 3.1
+        await pilot.pause()
+        await pilot.click("#all")
+        assert duties(outputs) == [3440, 3440, 3440]
+        await pilot.press("q")
+    assert duties(outputs) == [0, 0, 0]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keyboard bench test for gravity-feeding directly into three launcher wheels.
+"""Textual dashboard for gravity-feeding directly into three launcher wheels.
 
 Run: uv run python scripts/launcher_test.py [--dry-run]
 Defaults match the current bench: ESC channels 2/3/4, 5% throttle, 8% cap.
@@ -8,27 +8,32 @@ before arming. For the canonical tri-wheel wiring use --channels 3 4 6.
 Use --max-throttle 70 --throttle 25 to reproduce the original chat's settings.
 
 Start with LiPo disconnected, an empty guarded launcher, and no other hardware
-control program running. Connect the LiPo, then press Enter to arm for 3 seconds.
+control program running. Connect the LiPo, then click ARM (or press Enter) to arm for 3 seconds.
 1/2/3 toggle wheels; A/S/D pulse individual wheels; Space pulses all wheels.
 +/- adjust throttle by 1%; brackets adjust the next pulse by 25 ms (25-5000 ms).
 G/B/J/N record single/double/jam/no-launch outcomes. X cuts wheel PWM and requires
 Enter to re-arm; Q exits. Minimum throttle is restored after ordinary pulses.
 Confirm motors actually stop before touching them; signal-off is not a brake.
 
-Pulse timing is approximate: the input loop polls every 20 ms and PWM is 50 Hz.
+Pulse timing is approximate: a 20 ms dashboard timer checks deadlines; PWM is 50 Hz.
+Edit throttle/pulse fields and click APPLY. Keyboard shortcuts work outside fields.
 Counters describe this session and are printed on exit; they are manual records.
 """
 
 from __future__ import annotations
 
 import argparse
-import curses
 import signal
 import sys
 import time
 from collections.abc import Callable
-from contextlib import suppress
-from typing import Any
+from typing import Any, ClassVar
+
+from textual import events
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.widgets import Button, Footer, Input, Label, Static
 
 from mcenroebot.channel_map import (
     ESC_MAX_US,
@@ -168,7 +173,7 @@ class LauncherBench:
         if char in ("q", "x", "\x03"):
             self.stop()
             return char == "x"
-        if key in (10, 13, curses.KEY_ENTER) and not self.armed:
+        if key in (10, 13) and not self.armed:
             if self.arm_deadline is None:
                 errors = self.rig.minimum_all()
                 if errors:
@@ -203,65 +208,206 @@ class LauncherBench:
         return True
 
 
-def draw_screen(screen: Any, bench: LauncherBench) -> None:
-    total = sum(bench.stats.values())
-    success = 100 * bench.stats["good"] / total if total else 0.0
-    mode = "DRY RUN" if bench.rig.dry_run else "LIVE HARDWARE"
-    state = "ARMED" if bench.armed else "ARMING" if bench.arm_deadline else "PWM OFF"
-    lines = [
-        "McEnroeBot - Launcher Bench Test       X: STOP    Q: QUIT",
-        f"{mode} | {state} | Enter: arm/re-arm (3 seconds)",
-        f"Throttle: {bench.throttle}% (cap {bench.max_throttle}%)  Next pulse: {bench.pulse_ms} ms",
-        "",
+class LauncherApp(App[int]):
+    """The wheel-bench dashboard style with no-queue launcher controls."""
+
+    TITLE = "McEnroeBot Launcher Bench"
+    CSS = """
+    Screen { align: center middle; }
+    #viewport { height: 1fr; align: center middle; }
+    #panel { width: 72; max-width: 100%; height: auto;
+             border: round $primary; padding: 1 2; }
+    #title { text-align: center; text-style: bold; background: $primary; color: $text; }
+    #state { text-align: center; text-style: bold; margin: 1 0; color: $warning; }
+    .field { width: 1fr; height: auto; margin: 0 1; }
+    .field Label { color: $text-muted; }
+    #controls { height: auto; margin: 0 0 1 0; }
+    .buttons { height: auto; align-horizontal: center; }
+    Button { margin: 0 1; min-width: 12; }
+    .wheel { height: 3; align: center middle; }
+    .wheel Static { width: 1fr; content-align: left middle; }
+    #results { height: 2; text-align: center; margin-top: 1; }
+    #status { height: 3; margin-top: 1; text-align: center; color: $accent; }
+    #safety { color: $error; text-style: bold; text-align: center; }
+    """
+    BINDINGS: ClassVar = [
+        Binding("x", "stop_test", "STOP", priority=True),
+        Binding("q", "quit_safe", "Quit", priority=True),
+        Binding("ctrl+c", "quit_safe", "Quit", priority=True, show=False),
+        Binding("space", "pulse_all", "Pulse all", priority=True),
     ]
-    for index, channel in enumerate(bench.rig.channels):
-        status = "CONTINUOUS" if bench.running[index] else "MINIMUM" if bench.armed else state
-        if bench.deadlines[index]:
-            status += " + PULSE" if bench.running[index] else " / PULSE"
-        lines.append(f"Wheel {index + 1} / ch{channel}: {status}")
-    lines.extend(
-        [
-            "",
-            "1 / 2 / 3  Toggle continuous wheel",
-            "A / S / D  Pulse wheel 1 / 2 / 3    SPACE: pulse ALL",
-            "+ / -      Throttle +/-1%     ] / [: next pulse +/-25 ms",
-            "X          Cut wheel signals, cancel pulses, require re-arm",
-            "G / B / J / N: record single / double / jam / no launch",
-            "",
-            f"Single: {bench.stats['good']}  Double: {bench.stats['double']}  "
-            f"Jam: {bench.stats['jam']}  None: {bench.stats['none']}",
-            f"Total: {total}   Single-ball success: {success:.1f}%",
-            "",
-            bench.last_action,
-            "Confirm motors stop physically. Disconnect LiPo before touching.",
-        ]
-    )
-    screen.erase()
-    height, width = screen.getmaxyx()
-    for row, line in enumerate(lines[:height]):
-        if width > 1:
-            # Terminal resize may race the dimensions read above.
-            with suppress(curses.error):
-                screen.addnstr(row, 0, line, width - 1)
-    screen.refresh()
 
+    def __init__(self, bench: LauncherBench) -> None:
+        super().__init__()
+        self.bench = bench
+        self.failed = False
 
-def run_tui(screen: Any, bench: LauncherBench) -> None:
-    with suppress(curses.error):
-        curses.curs_set(0)
-    screen.keypad(True)
-    screen.timeout(20)
-    while True:
-        was_armed = bench.armed
-        bench.tick()
-        if bench.armed and not was_armed:
-            curses.flushinp()  # Discard motion keys queued during arming.
-        draw_screen(screen, bench)
-        key = screen.getch()
-        if not bench.handle_key(key):
+    def compose(self) -> ComposeResult:
+        dry = " — DRY RUN" if self.bench.rig.dry_run else ""
+        with VerticalScroll(id="viewport"), Vertical(id="panel"):
+            yield Static(f"McENROEBOT LAUNCHER BENCH{dry}", id="title")
+            yield Static("DISARMED — PWM OFF", id="state")
+            with Horizontal(id="controls"):
+                with Vertical(classes="field"):
+                    yield Label(f"THROTTLE % (0-{self.bench.max_throttle})")
+                    yield Input(str(self.bench.throttle), type="integer", id="percent")
+                with Vertical(classes="field"):
+                    yield Label("PULSE MS (25-5000)")
+                    yield Input(str(self.bench.pulse_ms), type="integer", id="pulse-ms")
+                yield Button("APPLY", id="apply", variant="primary")
+            with Horizontal(classes="buttons"):
+                yield Button("LiPo connected — ARM", id="arm", variant="warning")
+                yield Button("PULSE ALL", id="all", variant="success", disabled=True)
+                yield Button("STOP", id="stop", variant="error")
+            for index, channel in enumerate(self.bench.rig.channels):
+                with Horizontal(classes="wheel"):
+                    yield Static(f"Wheel {index + 1} / ch{channel}: OFF", id=f"wheel-{index}")
+                    yield Button("TURN ON", id=f"toggle-{index}", disabled=True)
+                    yield Button("PULSE", id=f"pulse-{index}", disabled=True)
+            with Horizontal(classes="buttons"):
+                for label, key in [
+                    ("SINGLE", "good"),
+                    ("DOUBLE", "double"),
+                    ("JAM", "jam"),
+                    ("NONE", "none"),
+                ]:
+                    yield Button(label, id=key)
+            yield Static(id="results")
+            yield Static(self.bench.last_action, id="status")
+            yield Static("X = STOP   •   Q = safe quit   •   SPACE = pulse all", id="safety")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self.set_focus(None)
+        self.set_interval(0.02, self.advance)
+        self.update_dashboard()
+
+    def advance(self) -> None:
+        if self.failed:
             return
-        if key in (ord("x"), ord("X"), 10, 13, curses.KEY_ENTER):
-            curses.flushinp()
+        try:
+            self.bench.tick()
+        except Exception as exc:
+            self.fault(exc)
+        self.update_dashboard()
+
+    def fault(self, exc: Exception) -> None:
+        self.failed = True
+        try:
+            self.bench.stop()
+        except Exception as stop_error:
+            self.bench.last_action = f"FAULT: {exc}; stop failed: {stop_error}. Disconnect LiPo."
+        else:
+            self.bench.last_action = f"FAULT: {exc}. PWM off; quit and inspect the rig."
+
+    def send_key(self, char: str) -> None:
+        if self.failed and char not in ("x", "q"):
+            return
+        try:
+            self.bench.handle_key(ord(char))
+        except Exception as exc:
+            self.fault(exc)
+        self.update_dashboard()
+
+    def update_dashboard(self) -> None:
+        bench = self.bench
+        state = (
+            "ARMED"
+            if bench.armed
+            else "ARMING — wait 3 seconds"
+            if bench.arm_deadline
+            else "DISARMED — PWM OFF"
+        )
+        self.query_one("#state", Static).update("FAULT — disconnect LiPo" if self.failed else state)
+        self.query_one("#arm", Button).disabled = (
+            self.failed or bench.armed or bench.arm_deadline is not None
+        )
+        self.query_one("#all", Button).disabled = not bench.armed or self.failed
+        for index, channel in enumerate(bench.rig.channels):
+            state = "ON" if bench.running[index] else "MIN" if bench.armed else "OFF"
+            if bench.deadlines[index]:
+                state += " + PULSE"
+            self.query_one(f"#wheel-{index}", Static).update(
+                f"Wheel {index + 1} / ch{channel}: {state}"
+            )
+            toggle = self.query_one(f"#toggle-{index}", Button)
+            toggle.label = "TURN OFF" if bench.running[index] else "TURN ON"
+            toggle.variant = "success" if bench.running[index] else "default"
+            toggle.disabled = not bench.armed or self.failed
+            self.query_one(f"#pulse-{index}", Button).disabled = not bench.armed or self.failed
+        total = sum(bench.stats.values())
+        success = 100 * bench.stats["good"] / total if total else 0
+        self.query_one("#results", Static).update(
+            f"Single {bench.stats['good']}   Double {bench.stats['double']}   "
+            f"Jam {bench.stats['jam']}   None {bench.stats['none']}\n"
+            f"Total {total}   •   Single-ball success {success:.1f}%"
+        )
+        self.query_one("#status", Static).update(bench.last_action)
+
+    def apply_settings(self) -> None:
+        try:
+            throttle = int(self.query_one("#percent", Input).value)
+            pulse_ms = int(self.query_one("#pulse-ms", Input).value)
+            if not 0 <= throttle <= self.bench.max_throttle or not 25 <= pulse_ms <= 5000:
+                raise ValueError("settings outside the displayed limits")
+        except ValueError as exc:
+            self.bench.last_action = f"INVALID: {exc}"
+        else:
+            self.bench.throttle, self.bench.pulse_ms = throttle, pulse_ms
+            try:
+                self.bench.apply()
+                self.bench.last_action = f"Applied {throttle}% throttle; next pulse {pulse_ms} ms."
+            except Exception as exc:
+                self.fault(exc)
+        self.update_dashboard()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        key = event.button.id or ""
+        if key == "apply":
+            self.apply_settings()
+        elif key == "arm":
+            self.send_key("\n")
+        elif key == "stop":
+            self.action_stop_test()
+        elif key == "all":
+            self.send_key(" ")
+        elif key.startswith("toggle-"):
+            self.send_key(str(int(key[-1]) + 1))
+        elif key.startswith("pulse-"):
+            self.send_key("asd"[int(key[-1])])
+        elif key in ("good", "double", "jam", "none"):
+            self.send_key({"good": "g", "double": "b", "jam": "j", "none": "n"}[key])
+        self.set_focus(None)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.apply_settings()
+        self.set_focus(None)
+
+    def on_key(self, event: events.Key) -> None:
+        if isinstance(self.focused, Input):
+            return
+        char = event.character or ("\n" if event.key == "enter" else "")
+        if char and char.lower() in "123asdgbjn+-=[]\n":
+            event.stop()
+            event.prevent_default()
+            self.send_key(char.lower())
+            if char in "+-=[]":
+                self.query_one("#percent", Input).value = str(self.bench.throttle)
+                self.query_one("#pulse-ms", Input).value = str(self.bench.pulse_ms)
+
+    def action_pulse_all(self) -> None:
+        if not isinstance(self.focused, Input):
+            self.send_key(" ")
+
+    def action_stop_test(self) -> None:
+        self.send_key("x")
+
+    def action_quit_safe(self) -> None:
+        self.send_key("q")
+        self.exit(1 if self.failed else 0)
+
+    def on_unmount(self) -> None:
+        self.bench.stop()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -294,7 +440,7 @@ def main(argv: list[str] | None = None) -> int:
         for signum in (signal.SIGTERM, signal.SIGHUP):
             previous[signum] = signal.signal(signum, interrupt)
         rig.connect()
-        curses.wrapper(run_tui, bench)
+        status = int(LauncherApp(bench).run() or 0)
     except KeyboardInterrupt:
         status = 130
     except Exception as exc:
