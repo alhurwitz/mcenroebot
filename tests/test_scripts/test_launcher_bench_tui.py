@@ -102,10 +102,15 @@ def test_two_continuous_wheels_survive_third_wheel_pulse(control):
     assert duties(outputs) == [3440, 3440, 3276]
 
 
-@pytest.mark.parametrize("key,expected", [("a", [3440, 3276, 3276]),
-                                         ("S", [3276, 3440, 3276]),
-                                         ("d", [3276, 3276, 3440]),
-                                         (" ", [3440, 3440, 3440])])
+@pytest.mark.parametrize(
+    "key,expected",
+    [
+        ("a", [3440, 3276, 3276]),
+        ("S", [3276, 3440, 3276]),
+        ("d", [3276, 3276, 3440]),
+        (" ", [3440, 3440, 3440]),
+    ],
+)
 def test_each_pulse_stops_on_its_deadline(control, key, expected):
     controller, outputs, now = control
     arm(controller, now)
@@ -221,9 +226,7 @@ def test_main_cleans_up_after_ui_failure(bench_module, hardware, monkeypatch, fa
     assert released == ["pca", "bus"]
 
 
-def test_main_cleans_up_after_partial_hardware_initialization(
-    bench_module, hardware, monkeypatch
-):
+def test_main_cleans_up_after_partial_hardware_initialization(bench_module, hardware, monkeypatch):
     _, outputs, released = hardware
     outputs[2].fail = True
     assert bench_module.main([]) == 1
@@ -231,11 +234,18 @@ def test_main_cleans_up_after_partial_hardware_initialization(
     assert released == ["pca", "bus"]
 
 
-@pytest.mark.parametrize("args", [
-    ["--channels", "2", "2", "4"], ["--channels", "2", "3", "16"],
-    ["--throttle", "9"], ["--throttle", "-1"], ["--max-throttle", "71"],
-    ["--pulse-ms", "0"], ["--pulse-ms", "5001"],
-])
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--channels", "2", "2", "4"],
+        ["--channels", "2", "3", "16"],
+        ["--throttle", "9"],
+        ["--throttle", "-1"],
+        ["--max-throttle", "71"],
+        ["--pulse-ms", "0"],
+        ["--pulse-ms", "5001"],
+    ],
+)
 def test_invalid_settings_fail_before_hardware_access(bench_module, args):
     with pytest.raises(SystemExit) as exc:
         bench_module.main(args)
