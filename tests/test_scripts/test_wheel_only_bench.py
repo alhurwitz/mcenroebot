@@ -163,3 +163,16 @@ def test_invalid_commands_never_start_a_wheel(
     monkeypatch.setattr(bench.time, "sleep", lambda seconds: None)
     assert bench.main() == 0
     assert all(max(pwm.values) == 3276 and pwm.duty_cycle == 0 for pwm in outputs.values())
+
+
+def test_full_throttle_maps_to_maximum_and_returns_to_minimum(rig, monkeypatch):
+    bench, outputs = rig
+    replies = iter(["", "all 100", "q"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(replies))
+    monkeypatch.setattr(bench.time, "sleep", lambda seconds: None)
+    assert bench.main() == 0
+    for pwm in outputs.values():
+        assert 6553 in pwm.values
+        index = pwm.values.index(6553)
+        assert pwm.values[index + 1] == 3276
+        assert pwm.values[-1] == 0

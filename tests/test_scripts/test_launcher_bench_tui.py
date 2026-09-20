@@ -164,7 +164,7 @@ def test_live_settings_are_bounded_and_do_not_extend_active_pulse(control):
     for _ in range(220):
         controller.handle_key(ord("+"))
         controller.handle_key(ord("]"))
-    assert (controller.throttle, controller.pulse_ms) == (8, 5000)
+    assert (controller.throttle, controller.pulse_ms) == (100, 5000)
     for _ in range(220):
         controller.handle_key(ord("-"))
         controller.handle_key(ord("["))
@@ -239,9 +239,9 @@ def test_main_cleans_up_after_partial_hardware_initialization(bench_module, hard
     [
         ["--channels", "2", "2", "4"],
         ["--channels", "2", "3", "16"],
-        ["--throttle", "9"],
+        ["--throttle", "101"],
         ["--throttle", "-1"],
-        ["--max-throttle", "71"],
+        ["--max-throttle", "101"],
         ["--pulse-ms", "0"],
         ["--pulse-ms", "5001"],
     ],
@@ -300,7 +300,7 @@ async def test_dashboard_rejects_invalid_settings_and_cleans_up_on_exit(bench_mo
     controller, outputs, now = control
     app = bench_module.LauncherApp(controller)
     async with app.run_test(size=(100, 45)) as pilot:
-        app.query_one("#percent", Input).value = "99"
+        app.query_one("#percent", Input).value = "101"
         await pilot.click("#apply")
         assert controller.throttle == 5
         assert "INVALID" in controller.last_action
@@ -311,3 +311,40 @@ async def test_dashboard_rejects_invalid_settings_and_cleans_up_on_exit(bench_mo
         assert duties(outputs) == [3440, 3440, 3440]
         await pilot.press("q")
     assert duties(outputs) == [0, 0, 0]
+
+
+def test_full_throttle_maps_to_maximum_pulse_and_estop_still_works(control):
+    controller, outputs, now = control
+    arm(controller, now)
+    controller.throttle = 100
+    controller.handle_key(ord("1"))
+    assert duties(outputs) == [6553, 3276, 3276]
+    controller.handle_key(ord("x"))
+    assert duties(outputs) == [0, 0, 0]
+    assert not controller.armed
+
+
+@pytest.mark.parametrize("percent", [-1, 101, float("nan"), float("inf")])
+def test_out_of_range_throttle_rejected_before_pwm_write(hardware, percent):
+    rig, outputs, _ = hardware
+    before = [len(outputs[ch].values) for ch in (2, 3, 4)]
+    with pytest.raises(ValueError):
+        rig.set_percent(0, percent)
+    assert [len(outputs[ch].values) for ch in (2, 3, 4)] == before
+
+
+def test_default_ui_allows_100_but_starts_at_five(bench_module, monkeypatch):
+    def inspect(app):
+        assert app.bench.max_throttle == 100
+        assert app.bench.throttle == 5
+        return 0
+    monkeypatch.setattr(bench_module.LauncherApp, "run", inspect)
+    assert bench_module.main(["--dry-run"]) == 0
+
+
+def test_explicit_full_throttle_cli_is_accepted(bench_module, monkeypatch):
+    def inspect(app):
+        assert app.bench.throttle == app.bench.max_throttle == 100
+        return 0
+    monkeypatch.setattr(bench_module.LauncherApp, "run", inspect)
+    assert bench_module.main(["--dry-run", "--max-throttle", "100", "--throttle", "100"]) == 0

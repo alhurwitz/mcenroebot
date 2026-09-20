@@ -5,7 +5,7 @@ Run: uv run python scripts/launcher_test.py [--dry-run]
 Defaults match the current bench: ESC channels 2/3/4, 5% throttle, 8% cap.
 Channel 2 is a bench wiring override, normally the head-roll servo. Check wiring
 before arming. For the canonical tri-wheel wiring use --channels 3 4 6.
-Use --max-throttle 70 --throttle 25 to reproduce the original chat's settings.
+Use --max-throttle 100 --throttle 25 to reproduce the original chat's settings.
 
 Start with LiPo disconnected, an empty guarded launcher, and no other hardware
 control program running. Connect the LiPo, then click ARM (or press Enter) to arm for 3 seconds.
@@ -67,8 +67,8 @@ class WheelRig:
             raise OSError("; ".join(errors))
 
     def set_percent(self, index: int, percent: int) -> None:
-        if not 0 <= percent <= 70:
-            raise ValueError("Bench throttle must be between 0 and 70 percent")
+        if not 0 <= percent <= 100:
+            raise ValueError("Bench throttle must be between 0 and 100 percent")
         if not self.dry_run:
             pulse_us = ESC_MIN_US + (ESC_MAX_US - ESC_MIN_US) * percent / 100
             duty = int(pulse_us * self.pca.frequency * 65535 / 1_000_000)
@@ -121,7 +121,7 @@ class LauncherBench:
         rig: WheelRig,
         *,
         throttle: int = 5,
-        max_throttle: int = 70,
+        max_throttle: int = 100,
         pulse_ms: int = 250,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -254,7 +254,7 @@ class LauncherApp(App[int]):
     def compose(self) -> ComposeResult:
         dry = " — DRY RUN" if self.bench.rig.dry_run else ""
         with VerticalScroll(id="viewport"), Vertical(id="panel"):
-            yield Static(f"McENROEBOT LAUNCHER BENCH{dry}", id="title")
+            yield Static(f"McenROEBOT LAUNCHER BENCH{dry}", id="title")
             yield Static("DISARMED — PWM OFF", id="state")
             with Horizontal(id="controls"):
                 with Vertical(classes="field"):
@@ -426,13 +426,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="rehearse without hardware")
     parser.add_argument("--channels", nargs=3, type=int, default=(2, 3, 4), metavar="CH")
     parser.add_argument("--throttle", type=int, default=5, help="starting percent (default: 5)")
-    parser.add_argument("--max-throttle", type=int, default=8, help="cap, 1-70%% (default: 8)")
+    parser.add_argument("--max-throttle", type=int, default=100, help="cap, 1-100%% (default: 8)")
     parser.add_argument("--pulse-ms", type=int, default=250, help="pulse, 25-5000 ms")
     args = parser.parse_args(argv)
     if len(set(args.channels)) != 3 or any(not 0 <= ch <= 15 for ch in args.channels):
         parser.error("--channels must be three distinct PCA9685 channels from 0 to 15")
-    if not 1 <= args.max_throttle <= 70 or not 0 <= args.throttle <= args.max_throttle:
-        parser.error("require 0 <= throttle <= max-throttle and 1 <= max-throttle <= 70")
+    if not 1 <= args.max_throttle <= 100 or not 0 <= args.throttle <= args.max_throttle:
+        parser.error("require 0 <= throttle <= max-throttle and 1 <= max-throttle <= 100")
     if not 25 <= args.pulse_ms <= 5000:
         parser.error("--pulse-ms must be between 25 and 5000")
     rig = WheelRig(tuple(args.channels), dry_run=args.dry_run)
